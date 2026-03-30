@@ -31,7 +31,9 @@ class DocumentadorIA:
     3. Los nombres de variables o funciones deben ir en `código embebido`.
     4. Si hay campos o atributos, utiliza una **Tabla de Markdown** para describirlos.
     5. Usa listas con viñetas para las reglas de negocio.
-
+    6. Evita expresiones referidas a "este código", "el codigo proporcionado" o "el código anterior". Sé específico en la descripción.
+    7. No incluyas explicaciones sobre cómo se generó la documentación, solo el resultado final.
+    8. si no se detectan campos o atributos, omite la tabla y solo describe la lógica de negocio.
     ### Código a analizar:
     ```
     {codigo_fuente}
@@ -47,6 +49,10 @@ class DocumentadorIA:
 Actúa como un Ingeniero de Software Senior. 
     Analiza el siguiente código y genera un **Informe Técnico Formal** apto para exportación a PDF.
     
+    ### Instrucciones de Formato (ESTRICTO):
+      1. Evita expresiones referidas a "este código", "el codigo proporcionado" o "el código anterior". Sé específico en la descripción.
+    2. No incluyas explicaciones sobre cómo se generó la documentación, solo el resultado final.
+
     ### Estructura del Informe (Formato Profesional):
     - Título Principal: Documentación Técnica de Módulo.
     - Encabezados: Usa jerarquía clara (1.0, 1.1, 2.0).
@@ -67,6 +73,10 @@ Actúa como un Ingeniero de Software Senior.
 Actúa como un Analista de Desarrollo de Software. 
     Genera el contenido para un **Documento de Requerimientos Técnicos** en Microsoft Word.
     
+   ### Instrucciones de Formato (ESTRICTO):
+     1. Evita expresiones referidas a "este código", "el codigo proporcionado" o "el código anterior". Sé específico en la descripción.
+    2. No incluyas explicaciones sobre cómo se generó la documentación, solo el resultado final.
+
     ### Instrucciones de Estilo:
     - Genera descripciones detalladas y extensas (evita respuestas cortas).
     - Estructura el contenido con títulos claros que correspondan a secciones de un documento de Word.
@@ -95,11 +105,3 @@ Actúa como un Analista de Desarrollo de Software.
 
         return chat_completion.choices[0].message.content
     
-
-
-codigo= """
-print("Hola Mundo")
-"""
-documentador = DocumentadorIA()
-documentacion = documentador._crear_prompt(codigo,tipo="markdown")
-print(documentador.generar(codigo))
