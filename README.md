@@ -1,7 +1,7 @@
 # EasyDocs
 
 ## ¿ Que es EasyDocs ?
-**easyDocs** es un asistente de ingeniería de software impulsado por **Inteligencia Artificial** (Llama 3.1 vía Groq) diseñado para automatizar la creación de documentación técnica. Transforma estructuras de datos y lógica de negocio compleja en informes detallados, profesionales y listos para entregar.
+**EasyDocs** es un asistente de ingeniería de software impulsado por **Inteligencia Artificial** (Llama 3.1 vía Groq) diseñado para automatizar la creación de documentación técnica. Transforma estructuras de datos y lógica de negocio compleja en informes detallados, profesionales y listos para entregar.
 
 ## Stack Tecnologico 
 
