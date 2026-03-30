@@ -5,9 +5,9 @@
 
 ## Stack Tecnologico 
 
-*Python 3.12+🐍*: El lenguaje base por su gran ecosistema en IA.
-*Groq Cloud API*: La plataforma que nos da la velocidad extrema usando el modelo Llama 3.1.
-*FPDF / Python-docx*: Librerías encargadas de la exportación a formatos PDF y Word
+- *Python 3.12+🐍*: El lenguaje base por su gran ecosistema en IA.
+- *Groq Cloud API*: La plataforma que nos da la velocidad extrema usando el modelo Llama 3.1.
+- *FPDF / Python-docx*: Librerías encargadas de la exportación a formatos PDF y Word
 
 ## Funciones Planeadas Para EasyDocs
 
