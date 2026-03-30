@@ -1,4 +1,4 @@
-from flask import Flask, send_file, request, jsonify , config , json
+from flask import Flask, send_file, request, jsonify 
 from utils import bytes , base
 from datetime import datetime
 from services.ai_services import DocumentadorIA
