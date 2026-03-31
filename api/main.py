@@ -1,5 +1,5 @@
 from flask import Flask, send_file, request, jsonify 
-from utils import bytes , base
+from utils import bytes , base ,validate
 from datetime import datetime
 from services.ai_services import DocumentadorIA
 import logging
@@ -59,7 +59,7 @@ def descargar_md():
         codigo_b64 = data.get('codigo', '')
         codigo_fuente = base.base64_to_string(codigo_b64)
         
-        is_valid, error_response = bytes.validar_codigo(codigo_fuente, logger, MIN_CODE_LENGTH, MAX_CODE_LENGTH)
+        is_valid, error_response = validate.validar_codigo(codigo_fuente, logger, MIN_CODE_LENGTH, MAX_CODE_LENGTH)
         
         if not is_valid:
             return jsonify(error_response), 400
