@@ -3,6 +3,7 @@ from utils import bytes , base ,validate
 from datetime import datetime
 from services.ai_services import DocumentadorIA
 import logging
+from routes.markdown import markdown_routes
 
 # Configurar logging
 logging.basicConfig(
@@ -13,7 +14,6 @@ logger = logging.getLogger(__name__)
 
 API_VERSION = "1.0.0"
 doc = DocumentadorIA()
-
 app = Flask(__name__)
 app.json.sort_keys = False # esto hace que el JSON tenga el mismo orden que las claves de diccionarios
 
@@ -35,78 +35,10 @@ def welcome():
 ],
     })
 
-@app.route('/descargar-md', methods=['POST'])
-def descargar_md():
-    try:
-        # Validar que el request tenga JSON
-        if not request.is_json:
-            logger.warning("Request sin contenido JSON")
-            return jsonify({
-                "error": "El request debe ser JSON",
-                "codigo_error": "INVALID_CONTENT_TYPE"
-            }), 400
+# Registrar rutas
+app.register_blueprint(markdown_routes)
 
-        data = request.get_json()
-        
-        # Validar que exista el campo 'codigo'
-        if 'codigo' not in data:
-            logger.warning("Request sin campo 'codigo'")
-            return jsonify({
-                "error": "El campo 'codigo' es requerido",
-                "codigo_error": "MISSING_FIELD"
-            }), 400
-
-        codigo_b64 = data.get('codigo', '')
-        codigo_fuente = base.base64_to_string(codigo_b64)
-        
-        is_valid, error_response = validate.validar_codigo(codigo_fuente, logger, MIN_CODE_LENGTH, MAX_CODE_LENGTH)
-        
-        if not is_valid:
-            return jsonify(error_response), 400
-        
-        
-
-        logger.info(f"Generando documentación para código de {len(codigo_fuente)} caracteres")
-        
-        # Generar documentación
-        contenido_ia = doc._crear_prompt(codigo_fuente, tipo="markdown")
-        resp = doc.generar(contenido_ia)
-        
-        # Validar que la respuesta no esté vacía
-        if not resp or not resp.strip():
-            logger.error("La IA devolvió una respuesta vacía")
-            return jsonify({
-                "error": "No se pudo generar la documentación",
-                "codigo_error": "EMPTY_RESPONSE"
-            }), 500
-
-        archivo_virtual = bytes.preparar_descarga(resp)
-        
-        logger.info("Documentación generada exitosamente")
-        
-        return send_file(
-            archivo_virtual,
-            mimetype='text/markdown',
-            as_attachment=True,
-            download_name=f'documentacion_{datetime.now().strftime("%Y-%m-%d_%H-%M")}.md'
-        )
-
-    except ValueError as e:
-      
-        logger.error(f"Error de validación: {str(e)}")
-        return jsonify({
-            "error": str(e),
-            "codigo_error": "VALIDATION_ERROR"
-        }), 400
-
-    except Exception as e:
-        # Error inesperado
-        logger.error(f"Error inesperado: {str(e)}", exc_info=True)
-        return jsonify({
-            "error": "Error interno del servidor al generar documentación",
-            "codigo_error": "INTERNAL_ERROR"
-        }), 500
-
+# Manejo de errores
 @app.errorhandler(404)
 def not_found(e):
     return jsonify({
