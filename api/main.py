@@ -4,6 +4,7 @@ from datetime import datetime
 from services.ai_services import DocumentadorIA
 import logging
 from routes.markdown import markdown_routes
+from routes.pdf import pdf_routes
 
 # Configurar logging
 logging.basicConfig(
@@ -12,7 +13,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-API_VERSION = "1.0.0"
+API_VERSION = "1.1.0"
 doc = DocumentadorIA()
 app = Flask(__name__)
 app.json.sort_keys = False # esto hace que el JSON tenga el mismo orden que las claves de diccionarios
@@ -26,17 +27,24 @@ def welcome():
     return jsonify({
         "mensaje": "¡Bienvenido a EasyDocs API!",
         "version": API_VERSION,
-        "endpoints": [
-    {
-        "ruta": "/descargar-md",
-        "metodo": "POST",
-        "descripcion": "Genera documentación Markdown"
-    }
-],
+      "endpoints": [
+            {
+                "ruta": "/descargar-md",
+                "metodo": "POST",
+                "descripcion": "Genera documentación Markdown"
+            },
+            {
+                "ruta": "/descargar-pdf",
+                "metodo": "POST",
+                "descripcion": "Genera documentación PDF"
+            }
+        ]
+,
     })
 
 # Registrar rutas
 app.register_blueprint(markdown_routes)
+app.register_blueprint(pdf_routes)
 
 # Manejo de errores
 @app.errorhandler(404)
