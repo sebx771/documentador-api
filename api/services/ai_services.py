@@ -14,6 +14,44 @@ if not api_key:
     logger.error("API_KEY no encontrada en variables de entorno")
     raise ValueError("API_KEY no configurada. Configure la variable de entorno API_KEY")
 
+# Variables globales
+## Markdown
+formato_salida = """
+### 🏗️ ESTRUCTURA TÉCNICA DE LA SALIDA (OBLIGATORIO):
+    1. **## 1. Definición y Alcance**: 
+       - Describe el propósito del módulo. 
+       - Menciona el stack tecnológico detectado (ej: `Flask`, `Pydantic`, `Logging`).
+    
+    2. **## 2. Arquitectura de Componentes**: 
+       - Presenta una **Tabla de Diccionario de Datos** con: `Entidad/Variable`, `Tipo`, `Descripción` y `Valor por Defecto`.
+       - Usa `código embebido` para cada nombre técnico.
+    
+    3. **## 3. Lógica de Negocio y Validaciones**: 
+       - Lista numerada de procesos lógicos.
+       - Detalla restricciones específicas (ej: "El `codigo` debe tener entre `MIN_CODE_LENGTH` y `MAX_CODE_LENGTH` caracteres").
+    
+    4. **## 4. Guía de Integración (Ejemplo de Uso)**: 
+       - Incluye un bloque de código con un ejemplo de petición `POST` en formato `JSON`.
+       - Muestra un ejemplo de la respuesta generada.
+"""
+## PDF
+formato_salida_pdf = """
+ ### Secciones a incluir:
+    1. Introducción y Alcance del Código.
+    2. Diccionario de Datos (Campos, tipos y propósitos).
+    3. Lógica de Negocio y Casos de Uso.
+    4. Conclusiones Técnicas para el Informe.
+"""
+## Word
+formato_salida_word = """
+    ### Secciones a incluir:
+    1. Introducción y Alcance del Código.
+    2. Diccionario de Datos (Campos, tipos y propósitos).
+    3. Lógica de Negocio y Casos de Uso.
+    4. Conclusiones Técnicas para el Informe.
+"""
+
+
 try:
     client = Groq(api_key=api_key)
     logger.info("Cliente Groq inicializado correctamente")
@@ -64,11 +102,7 @@ class DocumentadorIA:
     ```
     {codigo_fuente}
     ```
-
-    ### Estructura de la Salida:
-    1. **Propósito del Módulo**: (Explicación técnica de alto nivel).
-    2. **Descripción de Componentes**: (Tabla con Columnas: Campo/Atributo | Tipo de Dato | Descripción).
-    3. **Reglas de Negocio Detectadas**: (Listado numerado de las validaciones y procesos lógicos).
+    {formato_salida}
     """
         elif tipo == "pdf":
             return f"""
@@ -85,11 +119,7 @@ Actúa como un Ingeniero de Software Senior.
     - Tablas: Presenta los atributos/campos en una tabla comparativa.
     - Párrafos: Usa un lenguaje descriptivo, técnico y formal.
 
-    ### Contenido Requerido:
-    1. Resumen Ejecutivo del Módulo.
-    2. Análisis de Estructura (Clases, Funciones y Atributos).
-    3. Diagrama Lógico (Descripción textual del flujo).
-    4. Reglas de Negocio y Validaciones.
+    {formato_salida_pdf}
 
     ### Código:
     {codigo_fuente}
@@ -109,35 +139,22 @@ Actúa como un Analista de Desarrollo de Software.
     - Incluye una sección de 'Glosario Técnico' si detectas términos complejos.
     - Asegúrate de que las reglas de negocio estén redactadas como requerimientos funcionales.
 
-    ### Secciones a incluir:
-    1. Introducción y Alcance del Código.
-    2. Diccionario de Datos (Campos, tipos y propósitos).
-    3. Lógica de Negocio y Casos de Uso.
-    4. Conclusiones Técnicas para el Informe del SENA.
+   
+     {formato_salida_word}
 
     ### Código:
     {codigo_fuente}
 """
     
     def generar(self, prompt):
-        """
-        Genera documentación usando la API de Groq.
-        
-        Args:
-            prompt: Prompt formateado para la IA
-            
-        Returns:
-            str: Contenido generado por la IA
-            
-        Raises:
-            Exception: Si ocurre un error en la llamada a la API
-        """
+
         try:
             logger.info(f"Enviando request a Groq API con modelo: {self.model}")
             
             chat_completion = self.client.chat.completions.create(
                 messages=[{"role": "user", "content": prompt}],
                 model=self.model,
+                temperature=0.1,
             )
             
             respuesta = chat_completion.choices[0].message.content
