@@ -65,7 +65,12 @@ class DocumentadorIA:
         self.model = model
         logger.info(f"DocumentadorIA inicializado con modelo: {model}")
     
-    def _crear_prompt(self, codigo_fuente, tipo) -> str:
+    def _crear_prompt(self, codigo_fuente, tipo , extra) -> str:
+        ex= extra if extra else "sin peticion extra , ignorar esta sección"
+        peticion= f"""Petición extra del usuario:
+        {ex}
+        """
+        
         """
         Crea el prompt para generar documentación según el tipo especificado.
         
@@ -103,6 +108,8 @@ class DocumentadorIA:
     {codigo_fuente}
     ```
     {formato_salida}
+    
+    {peticion}
     """
         elif tipo == "pdf":
             return f"""
@@ -120,6 +127,7 @@ Actúa como un Ingeniero de Software Senior.
     - Párrafos: Usa un lenguaje descriptivo, técnico y formal.
 
     {formato_salida_pdf}
+    {peticion}
 
     ### Código:
     {codigo_fuente}
@@ -141,6 +149,8 @@ Actúa como un Analista de Desarrollo de Software.
 
    
      {formato_salida_word}
+     {peticion}
+
 
     ### Código:
     {codigo_fuente}
