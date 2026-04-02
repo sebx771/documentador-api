@@ -18,13 +18,14 @@ MAX_CODE_LENGTH = 50000
 MIN_CODE_LENGTH = 10
 
 # Inicializar servicios
-doc = DocumentadorIA()
+
 
 download_routes = Blueprint('download', __name__)
 
 
 @download_routes.route('/download/<file_type>', methods=['POST'])
 def download(file_type):
+    doc = DocumentadorIA()
     """
     Endpoint unificado para descargar documentación en diferentes formatos.
     
