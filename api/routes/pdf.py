@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify, send_file
-from utils import base, validate
-from services.ai_services import DocumentadorIA
-from export.pdf_gen import EasyDocsPDF
+from ..utils import base, validate
+from ..services.ai_services import DocumentadorIA
+from ..export.pdf_gen import EasyDocsPDF
 from datetime import datetime
 import io
 import logging

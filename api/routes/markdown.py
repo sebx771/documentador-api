@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify , send_file , make_response
-from utils import base , validate , bytes
-from services.ai_services import DocumentadorIA
+from ..utils import base , validate , bytes_utils
+from ..services.ai_services import DocumentadorIA
 from datetime import datetime
 import logging
 
@@ -47,7 +47,7 @@ def descargar_md():
         logger.info("Generando documentación Markdown para el código recibido")
         p_markdown = doc._crear_prompt(codigo_fuente,tipo="markdown")
         resultado_markdown = doc.generar(p_markdown)
-        archivo_virtual = bytes.preparar_descarga(resultado_markdown)
+        archivo_virtual = bytes_utils.preparar_descarga(resultado_markdown)
         
         logger.info("Documentación Markdown generada exitosamente")
         response= make_response( send_file(

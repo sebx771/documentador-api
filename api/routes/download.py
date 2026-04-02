@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify, send_file, make_response
-from utils import validate, bytes, get_request
-from services.ai_services import DocumentadorIA
-from export.pdf_gen import EasyDocsPDF
+from ..utils import validate, bytes_utils, get_request
+from ..services.ai_services import DocumentadorIA
+from ..export.pdf_gen import EasyDocsPDF
 from datetime import datetime
 import io
 import logging
@@ -96,7 +96,7 @@ def download(file_type):
 def _generar_markdown(contenido):
     """Genera y retorna un archivo Markdown."""
     logger.info("Documentación Markdown generada exitosamente")
-    archivo_virtual = bytes.preparar_descarga(contenido)
+    archivo_virtual = bytes_utils.preparar_descarga(contenido)
     
     response = make_response(send_file(
         archivo_virtual,
