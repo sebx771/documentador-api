@@ -22,6 +22,24 @@ MIN_CODE_LENGTH = 10
 
 download_routes = Blueprint('download', __name__)
 
+@download_routes.route('/download',methods=['GET'])
+def download_info():
+    return jsonify({
+        "message": "Endpoint para descargar documentación",
+        "available_formats": ["pdf", "markdown"],
+        "usage": {
+            "pdf": {
+                "method": "POST",
+                "route": "/download/pdf",
+                "description": "Genera un PDF con la documentación del código proporcionado"
+            },
+            "markdown": {
+                "method": "POST",
+                "route": "/download/markdown",
+                "description": "Genera un archivo Markdown con la documentación del código proporcionado"
+            }
+        }
+    })
 
 @download_routes.route('/download/<file_type>', methods=['POST'])
 def download(file_type):
@@ -77,7 +95,6 @@ def download(file_type):
 
         # Generar documentación con IA
         logger.info(f"Generando documentación {file_type} para el código recibido")
-        p_markdown = doc._build_system_prompt(tipo="markdown")
         resultado_markdown = doc.generar(codigo_fuente, tipo="markdown", extra=extra)
 
         # Generar archivo según el tipo solicitado
