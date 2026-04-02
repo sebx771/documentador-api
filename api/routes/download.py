@@ -24,6 +24,7 @@ download_routes = Blueprint('download', __name__)
 
 @download_routes.route('/download',methods=['GET'])
 def download_info():
+    """"""
     return jsonify({
         "message": "Endpoint para descargar documentación",
         "available_formats": ["pdf", "markdown"],
