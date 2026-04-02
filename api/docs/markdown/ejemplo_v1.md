@@ -1,4 +1,4 @@
-# Ejemplo de documentacion generada sobre el modulo main
+# Ejemplo de documentacion generada sobre el modulo main v1.0.0
 
 ## 1. Definición y Alcance
 El propósito del módulo es proporcionar una API para generar documentación técnica en formato Markdown a partir de código fuente proporcionado. El stack tecnológico detectado incluye `Flask` para la creación de la API, `Logging` para el manejo de registros y `base64` para la codificación y decodificación de datos.
