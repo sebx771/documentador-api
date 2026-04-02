@@ -1,10 +1,6 @@
-from flask import Flask, send_file, request, jsonify 
-from utils import bytes , base ,validate
-from datetime import datetime
-from services.ai_services import DocumentadorIA
+from flask import Flask, jsonify 
 import logging
-from routes.markdown import markdown_routes
-from routes.pdf import pdf_routes
+from .routes.download import download_routes
 
 # Configurar logging
 logging.basicConfig(
@@ -14,7 +10,6 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 API_VERSION = "1.1.0"
-doc = DocumentadorIA()
 app = Flask(__name__)
 app.json.sort_keys = False # esto hace que el JSON tenga el mismo orden que las claves de diccionarios
 
@@ -29,22 +24,19 @@ def welcome():
         "version": API_VERSION,
       "endpoints": [
             {
-                "ruta": "/descargar-md",
+                "ruta": "/download/<file_type>",
                 "metodo": "POST",
-                "descripcion": "Genera documentación Markdown"
-            },
-            {
-                "ruta": "/descargar-pdf",
-                "metodo": "POST",
-                "descripcion": "Genera documentación PDF"
+                "descripcion": "Genera documentación en el formato especificado (pdf o markdown)",
+                "parametros": {
+                    "file_type": "Tipo de archivo: 'pdf' o 'markdown'"
+                }
             }
         ]
 ,
     })
 
 # Registrar rutas
-app.register_blueprint(markdown_routes)
-app.register_blueprint(pdf_routes)
+app.register_blueprint(download_routes)
 
 # Manejo de errores
 @app.errorhandler(404)
