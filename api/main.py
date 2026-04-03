@@ -1,6 +1,9 @@
 from flask import Flask, jsonify 
 import logging
-from .routes.download import download_routes
+from .routes.download import download_routes 
+from .routes.zip import zip_routes
+
+
 
 # Configurar logging
 logging.basicConfig(
@@ -36,7 +39,8 @@ def welcome():
     })
 
 # Registrar rutas
-app.register_blueprint(download_routes)
+app.register_blueprint(download_routes, url_prefix='/api')
+app.register_blueprint(zip_routes, url_prefix='/api')
 
 # Manejo de errores
 @app.errorhandler(404)
