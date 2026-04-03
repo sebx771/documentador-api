@@ -1,10 +1,12 @@
 from flask import Blueprint, request, jsonify, send_file, make_response
 from ..utils import validate, bytes_utils, get_request
 from ..services.ai_services import DocumentadorIA
+from ..services.cache_service import get_global_cache
 from ..export.pdf_gen import EasyDocsPDF
 from datetime import datetime
 import io
 import logging
+import time
 
 # Configurar logging
 logging.basicConfig(
@@ -18,6 +20,15 @@ MAX_CODE_LENGTH = 50000
 MIN_CODE_LENGTH = 10
 
 # Inicializar servicios
+doc = DocumentadorIA()
+cache = get_global_cache(max_size=100, ttl_seconds=3600)
+
+def documentador_ia():
+    global doc
+    if  doc is None:
+        doc = DocumentadorIA()
+    return doc
+    
 
 
 download_routes = Blueprint('download', __name__)
@@ -44,7 +55,8 @@ def download_info():
 
 @download_routes.route('/download/<file_type>', methods=['POST'])
 def download(file_type):
-    doc = DocumentadorIA()
+    docs= documentador_ia()
+    start_time = time.time()
     """
     Endpoint unificado para descargar documentación en diferentes formatos.
     
@@ -94,15 +106,42 @@ def download(file_type):
         if not is_valid:
             return jsonify(error_response), 400
 
-        # Generar documentación con IA
-        logger.info(f"Generando documentación {file_type} para el código recibido")
-        resultado_markdown = doc.generar(codigo_fuente, tipo="markdown", extra=extra)
+        # Cache: generar hash y buscar en Redis
+        extra_str = extra or ""
+        cache_key = cache.generate_hash(
+            content=codigo_fuente,
+            doc_type="markdown",
+            extra_requirements=extra_str
+        )
+        
+        cached_result = cache.get(cache_key)
+        
+        logger.info(f"Cache key: {cache_key[:16]}...")
+        
+        if cached_result:
+            logger.info(f"Cache HIT para código: {len(codigo_fuente)} chars")
+            resultado_markdown = cached_result.get("documentation", "")
+            from_cache = True
+        else:
+            logger.info(f"Cache MISS, generando con IA...")
+            # Generar documentación con IA
+            logger.info(f"Generando documentación {file_type} para el código recibido")
+            resultado_markdown = docs.generar(codigo_fuente, tipo="markdown", extra=extra_str)
+            
+            cache.set(cache_key, {
+                "documentation": resultado_markdown,
+                "file_type": file_type
+            })
+            from_cache = False
+
+        elapsed_time = time.time() - start_time
+        cache_stats = cache.get_stats()
 
         # Generar archivo según el tipo solicitado
         if file_type == 'markdown':
-            return _generar_markdown(resultado_markdown)
+            return _generar_markdown(resultado_markdown, cache_stats, elapsed_time, from_cache)
         elif file_type == 'pdf':
-            return _generar_pdf(resultado_markdown)
+            return _generar_pdf(resultado_markdown, cache_stats, elapsed_time, from_cache)
 
     except Exception as e:
         logger.error(f"Error inesperado: {str(e)}", exc_info=True)
@@ -112,9 +151,10 @@ def download(file_type):
         }), 500
 
 
-def _generar_markdown(contenido):
+def _generar_markdown(contenido, cache_stats=None, elapsed_time=0.0, from_cache=False):
     """Genera y retorna un archivo Markdown."""
-    logger.info("Documentación Markdown generada exitosamente")
+    logger.info(f"Documentación Markdown generada exitosamente (cache: {from_cache}, time: {elapsed_time:.2f}s)")
+    logger.info(f"Cache stats: {cache_stats}")
     archivo_virtual = bytes_utils.preparar_descarga(contenido)
     
     response = make_response(send_file(
@@ -127,9 +167,10 @@ def _generar_markdown(contenido):
     return response
 
 
-def _generar_pdf(contenido):
+def _generar_pdf(contenido, cache_stats=None, elapsed_time=0.0, from_cache=False):
     """Genera y retorna un archivo PDF."""
-    logger.info("PDF generado exitosamente")
+    logger.info(f"PDF generado exitosamente (cache: {from_cache}, time: {elapsed_time:.2f}s)")
+    logger.info(f"Cache stats: {cache_stats}")
     
     # Crear el PDF
     pdf = EasyDocsPDF()
