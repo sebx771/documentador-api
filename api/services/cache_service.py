@@ -20,7 +20,7 @@ _cache_lock = threading.Lock()
 
 def get_global_cache(
     max_size: int = 100,
-    ttl_seconds: int = 3600,
+    ttl_seconds: int = 86400,
     enable_lru: bool = True
 ) -> 'CacheService':
     global _global_cache_instance
