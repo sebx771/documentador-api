@@ -1,7 +1,10 @@
-from flask import blueprints , request , jsonify
+from flask import blueprints , request , jsonify , send_file , make_response
 import logging
 import time
+from datetime import datetime
 
+from ..utils import bytes_utils
+from ..export.pdf_gen import EasyDocsPDF
 from ..services.zip_services import ZipService
 from ..services.documentation_orchestrator import DocumentationOrchestrator
 from ..services.chunking_service import ChunkingService
@@ -123,28 +126,13 @@ def upload_zip():
             f"{result['metadata']['total_chunks']} chunks, "
             f"cache hit: {cache_stats.get('hits', 0)}, "
             f"time: {elapsed:.2f}s"
+            f"error: {result['metadata'].get('invalid_files', [])}"
+            f"doc_type: {doc_type}"
         )
-        
-        return jsonify({
-            "success": True,
-            "documentation": result['documentation'],
-            "metadata": {
-                "total_files": result['metadata']['total_files'],
-                "invalid_files_count": result['metadata']['invalid_files_count'],
-                "total_chunks": result['metadata']['total_chunks'],
-                "cache": {
-                    "hits": cache_stats.get('hits', 0),
-                    "misses": cache_stats.get('misses', 0),
-                    "hit_rate_percent": cache_stats.get('hit_rate_percent', 0)
-                },
-                "elapsed_time_seconds": result['metadata']['elapsed_time_seconds'],
-                "input_size_bytes": result['metadata']['input_size_bytes']
-            },
-            "errors": {
-                "files": result['metadata'].get('invalid_files', []),
-                "count": result['metadata'].get('invalid_files_count', 0)
-            }
-        })
+        if doc_type == 'markdown':
+            return _generar_markdown(result['documentation'], cache_stats, elapsed)
+        if doc_type == 'pdf':
+            return _generar_pdf(result['documentation'], cache_stats, elapsed)
         
     except ValueError as e:
         logger.error(f"Error de validación: {str(e)}")
@@ -161,3 +149,40 @@ def upload_zip():
         }), 500
     
 
+def _generar_markdown(contenido, cache_stats=None, elapsed_time=0.0, from_cache=False):
+    """Genera y retorna un archivo Markdown."""
+    logger.info(f"Documentación Markdown generada exitosamente (cache: {from_cache}, time: {elapsed_time:.2f}s)")
+    logger.info(f"Cache stats: {cache_stats}")
+    archivo_virtual = bytes_utils.preparar_descarga(contenido)
+    
+    response = make_response(send_file(
+        archivo_virtual,
+        mimetype='text/markdown',
+        as_attachment=True,
+        download_name=f'documentacion_{datetime.now().strftime("%Y-%m-%d_%H-%M")}.md'
+    ))
+    response.headers["Content-Disposition"] = f"attachment; filename=documentacion_{datetime.now().strftime('%Y-%m-%d_%H-%M')}.md"
+    return response
+
+
+def _generar_pdf(contenido, cache_stats=None, elapsed_time=0.0, from_cache=False):
+    """Genera y retorna un archivo PDF."""
+    logger.info(f"PDF generado exitosamente (cache: {from_cache}, time: {elapsed_time:.2f}s)")
+    logger.info(f"Cache stats: {cache_stats}")
+    
+    # Crear el PDF
+    pdf = EasyDocsPDF()
+    pdf.add_page()
+    pdf.construir_desde_markdown(contenido)
+    
+    # Preparar descarga en memoria
+    pdf_bytes = pdf.output(dest='S').encode('latin-1')
+    archivo_virtual = bytes_utils.preparar_descarga(pdf_bytes)
+    
+    
+    return send_file(
+        archivo_virtual,
+        mimetype='application/pdf',
+        as_attachment=True,
+        download_name=f'doc_{datetime.now().strftime("%Y%m%d_%H%M")}.pdf'
+    )  
