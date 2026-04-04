@@ -12,7 +12,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-API_VERSION = "1.1.0"
+API_VERSION = "2.0.0"
 app = Flask(__name__)
 app.json.sort_keys = False # esto hace que el JSON tenga el mismo orden que las claves de diccionarios
 

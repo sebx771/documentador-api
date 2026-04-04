@@ -42,12 +42,12 @@ def download_info():
         "usage": {
             "pdf": {
                 "method": "POST",
-                "route": "/download/pdf",
+                "route": "api/download/pdf",
                 "description": "Genera un PDF con la documentación del código proporcionado"
             },
             "markdown": {
                 "method": "POST",
-                "route": "/download/markdown",
+                "route": "api/download/markdown",
                 "description": "Genera un archivo Markdown con la documentación del código proporcionado"
             }
         }
