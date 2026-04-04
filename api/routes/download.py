@@ -21,7 +21,7 @@ MIN_CODE_LENGTH = 10
 
 # Inicializar servicios
 doc = DocumentadorIA()
-cache = get_global_cache(max_size=100, ttl_seconds=3600)
+cache = get_global_cache(max_size=100)
 
 def documentador_ia():
     global doc

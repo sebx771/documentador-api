@@ -98,7 +98,6 @@ def upload_zip():
         )
         cache_service = get_global_cache(
             max_size=100,
-            ttl_seconds=3600,
             enable_lru=True
         )
         
