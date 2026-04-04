@@ -110,7 +110,7 @@ def download(file_type):
         extra_str = extra or ""
         cache_key = cache.generate_hash(
             content=codigo_fuente,
-            doc_type="markdown",
+            doc_type=file_type,
             extra_requirements=extra_str
         )
         
