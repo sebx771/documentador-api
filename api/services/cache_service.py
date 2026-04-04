@@ -41,7 +41,7 @@ class CacheService:
     """
 
     DEFAULT_MAX_SIZE = 100
-    DEFAULT_TTL_SECONDS = 3600
+    DEFAULT_TTL_SECONDS = 86400
 
     def __init__(
         self,
