@@ -230,16 +230,15 @@ class DocumentationOrchestrator:
         sections = []
         
         for result in chunk_results:
-            chunk_idx = result.get("chunk_index", 0)
             files = result.get("files", [])
             docs = result.get("documentation", "")
-            
-            section = f"## Chunk {chunk_idx + 1}\n"
-            section += f"Archivos: {', '.join(files[:5])}"
+
+            section = f"\n\n{docs}"
+            section += f"## Fuentes: {', '.join(files[:5])}"
             if len(files) > 5:
                 section += f" ... y {len(files) - 5} más"
             section += f"\n\n{docs}"
             
             sections.append(section)
         
-        return "\n\n---\n\n".join(sections)
+        return "\n\n\n".join(sections)
