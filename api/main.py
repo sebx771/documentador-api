@@ -31,7 +31,7 @@ def welcome():
                 "metodo": "POST",
                 "descripcion": "Genera documentación en el formato especificado (pdf o markdown)",
                 "parametros": {
-                    "file_type": "Tipo de archivo: 'pdf' o 'markdown'"
+                    "file_type": "Tipo de archivo: 'pdf', 'markdown' o 'docx'"
                 }
             }
         ]

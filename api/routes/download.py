@@ -3,6 +3,7 @@ from ..utils import validate, bytes_utils, get_request
 from ..services.ai_services import DocumentadorIA
 from ..services.cache_service import get_global_cache
 from ..export.pdf_gen import EasyDocsPDF
+from ..export.docx_gen import EasyDocsDOCX
 from datetime import datetime
 import io
 import logging
@@ -38,7 +39,7 @@ def download_info():
     """"""
     return jsonify({
         "message": "Endpoint para descargar documentación",
-        "available_formats": ["pdf", "markdown"],
+        "available_formats": ["pdf", "markdown", "docx"],
         "usage": {
             "pdf": {
                 "method": "POST",
@@ -49,6 +50,11 @@ def download_info():
                 "method": "POST",
                 "route": "api/download/markdown",
                 "description": "Genera un archivo Markdown con la documentación del código proporcionado"
+            },
+            "docx": {
+                "method": "POST",
+                "route": "api/download/docx",
+                "description": "Genera un archivo Word (.docx) con la documentación del código proporcionado"
             }
         }
     })
@@ -65,7 +71,7 @@ def download(file_type):
     """
     try:
         # Validar tipo de archivo
-        if file_type not in ['pdf', 'markdown']:
+        if file_type not in ['pdf', 'markdown', 'docx']:
             return jsonify({
                 "error": "Tipo de archivo no válido. Use 'pdf' o 'markdown'",
                 "codigo_error": "INVALID_FILE_TYPE"
@@ -142,6 +148,8 @@ def download(file_type):
             return _generar_markdown(resultado_markdown, cache_stats, elapsed_time, from_cache)
         elif file_type == 'pdf':
             return _generar_pdf(resultado_markdown, cache_stats, elapsed_time, from_cache)
+        elif file_type == 'docx':
+            return _generar_docx(resultado_markdown, cache_stats, elapsed_time, from_cache)
 
     except Exception as e:
         logger.error(f"Error inesperado: {str(e)}", exc_info=True)
@@ -182,9 +190,24 @@ def _generar_pdf(contenido, cache_stats=None, elapsed_time=0.0, from_cache=False
     archivo_virtual = bytes_utils.preparar_descarga(pdf_bytes)
     
     
+def _generar_docx(contenido, cache_stats=None, elapsed_time=0.0, from_cache=False):
+    """Genera y retorna un archivo DOCX."""
+    logger.info(f"DOCX generado exitosamente (cache: {from_cache}, time: {elapsed_time:.2f}s)")
+    logger.info(f"Cache stats: {cache_stats}")
+    
+    # Crear el DOCX
+    docx = EasyDocsDOCX()
+    docx.agregar_encabezado()
+    docx.construir_desde_markdown(contenido)
+    
+    # Preparar descarga en memoria
+    output_stream = io.BytesIO()
+    docx.guardar(output_stream)
+    output_stream.seek(0)
+    
     return send_file(
-        archivo_virtual,
-        mimetype='application/pdf',
+        output_stream,
+        mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
         as_attachment=True,
-        download_name=f'doc_{datetime.now().strftime("%Y%m%d_%H%M")}.pdf'
+        download_name=f'doc_{datetime.now().strftime("%Y%m%d_%H%M")}.docx'
     )
