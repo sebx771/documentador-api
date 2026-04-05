@@ -2,8 +2,7 @@ from flask import Flask, jsonify
 import logging
 from .routes.download import download_routes 
 from .routes.zip import zip_routes
-
-
+from flask_cors import CORS
 
 # Configurar logging
 logging.basicConfig(
@@ -14,6 +13,7 @@ logger = logging.getLogger(__name__)
 
 API_VERSION = "2.0.0"
 app = Flask(__name__)
+CORS(app)
 app.json.sort_keys = False # esto hace que el JSON tenga el mismo orden que las claves de diccionarios
 
 # Constantes de validación
