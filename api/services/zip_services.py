@@ -1,4 +1,5 @@
 import zipfile
+from ..export.docx_gen import EasyDocsDOCX
 import io
 import os
 import time

@@ -2,13 +2,18 @@ from flask import blueprints , request , jsonify , send_file , make_response
 import logging
 import time
 from datetime import datetime
+import io
 
 from ..utils import bytes_utils
 from ..export.pdf_gen import EasyDocsPDF
+from ..export.docx_gen import EasyDocsDOCX
 from ..services.zip_services import ZipService
 from ..services.documentation_orchestrator import DocumentationOrchestrator
 from ..services.chunking_service import ChunkingService
-from ..services.cache_service import CacheService, get_global_cache
+from ..services.cache_service import  get_global_cache
+
+
+# Configurar logging
 
 logger = logging.getLogger(__name__)
 
@@ -133,6 +138,8 @@ def upload_zip():
             return _generar_markdown(result['documentation'], cache_stats, elapsed)
         if doc_type == 'pdf':
             return _generar_pdf(result['documentation'], cache_stats, elapsed)
+        if doc_type == 'word':
+            return _generar_docx(result['documentation'], cache_stats, elapsed)
         
     except ValueError as e:
         logger.error(f"Error de validación: {str(e)}")
@@ -186,3 +193,25 @@ def _generar_pdf(contenido, cache_stats=None, elapsed_time=0.0, from_cache=False
         as_attachment=True,
         download_name=f'doc_{datetime.now().strftime("%Y%m%d_%H%M")}.pdf'
     )  
+
+def _generar_docx(contenido, cache_stats=None, elapsed_time=0.0, from_cache=False):
+    """Genera y retorna un archivo DOCX."""
+    logger.info(f"DOCX generado exitosamente (cache: {from_cache}, time: {elapsed_time:.2f}s)")
+    logger.info(f"Cache stats: {cache_stats}")
+    
+    # Crear el DOCX
+    docx = EasyDocsDOCX()
+    docx.agregar_encabezado()
+    docx.construir_desde_markdown(contenido)
+    
+    # Preparar descarga en memoria
+    output_stream = io.BytesIO()
+    docx.guardar(output_stream)
+    output_stream.seek(0)
+    
+    return send_file(
+        output_stream,
+        mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        as_attachment=True,
+        download_name=f'doc_{datetime.now().strftime("%Y%m%d_%H%M")}.docx'
+    )
