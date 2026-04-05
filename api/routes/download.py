@@ -189,6 +189,13 @@ def _generar_pdf(contenido, cache_stats=None, elapsed_time=0.0, from_cache=False
     pdf_bytes = pdf.output(dest='S').encode('latin-1')
     archivo_virtual = bytes_utils.preparar_descarga(pdf_bytes)
     
+    return send_file(
+        archivo_virtual,
+        mimetype='application/pdf',
+        as_attachment=True,
+        download_name=f'documentacion_{datetime.now().strftime("%Y%m%d_%H%M")}.pdf'
+    )
+    
     
 def _generar_docx(contenido, cache_stats=None, elapsed_time=0.0, from_cache=False):
     """Genera y retorna un archivo DOCX."""
