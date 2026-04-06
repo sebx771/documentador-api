@@ -73,7 +73,7 @@ def download(file_type):
         # Validar tipo de archivo
         if file_type not in ['pdf', 'markdown', 'docx']:
             return jsonify({
-                "error": "Tipo de archivo no válido. Use 'pdf' o 'markdown'",
+                "error": "Tipo de archivo no válido. Use 'pdf' , 'markdown' o 'docx",
                 "codigo_error": "INVALID_FILE_TYPE"
             }), 400
 
