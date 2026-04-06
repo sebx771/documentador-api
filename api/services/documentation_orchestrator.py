@@ -237,7 +237,6 @@ class DocumentationOrchestrator:
             section += f"## Fuentes: {', '.join(files[:5])}"
             if len(files) > 5:
                 section += f" ... y {len(files) - 5} más"
-            section += f"\n\n{docs}"
             
             sections.append(section)
         
