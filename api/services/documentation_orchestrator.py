@@ -192,7 +192,8 @@ class DocumentationOrchestrator:
                 doc_result = self.documentador.generar(
                     codigo_fuente=chunk["content"],
                     tipo=doc_type,
-                    extra=extra_requirements
+                    extra=extra_requirements,
+                    is_chunk=True
                 )
                 
                 result = {
@@ -239,5 +240,9 @@ class DocumentationOrchestrator:
                 section += f" ... y {len(files) - 5} más"
             
             sections.append(section)
+            
         
-        return "\n\n\n".join(sections)
+        doc_unido= "\n".join(sections)
+        final_doc= self.documentador.apply_extra(doc_unido)
+        
+        return final_doc
