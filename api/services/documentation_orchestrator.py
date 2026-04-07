@@ -84,7 +84,7 @@ class DocumentationOrchestrator:
 
         chunk_results = self._process_chunks(chunks, doc_type, extra_requirements)
 
-        final_documentation = self._consolidate_documentation(chunk_results)
+        final_documentation = self._consolidate_documentation(chunk_results, extra_requirements)
 
         elapsed_time = time.time() - start_time
         cache_stats = self.cache_service.get_stats()
@@ -220,29 +220,54 @@ class DocumentationOrchestrator:
         
         return results
 
-    def _consolidate_documentation(self, chunk_results: List[Dict]) -> str:
-        """Consolida la documentación de múltiples chunks."""
+    def _consolidate_documentation(self, chunk_results: List[Dict], extra_requirements: str) -> str:
+        """Consolida la documentación de múltiples chunks (versión mejorada)."""
+
         if not chunk_results:
             return "No se pudo generar documentación."
         
         if len(chunk_results) == 1:
             return chunk_results[0].get("documentation", "")
-        
-        sections = []
-        
-        for result in chunk_results:
-            files = result.get("files", [])
-            docs = result.get("documentation", "")
 
-            section = f"\n\n{docs}"
-            section += f"## Fuentes: {', '.join(files[:5])}"
-            if len(files) > 5:
-                section += f" ... y {len(files) - 5} más"
-            
-            sections.append(section)
-            
-        
-        doc_unido= "\n".join(sections)
-        final_doc= self.documentador.apply_extra(doc_unido)
-        
+        import re
+        from collections import defaultdict
+
+        sections = defaultdict(list)
+
+        # 🔥 1. Separar por headers
+        for result in chunk_results:
+            doc = result.get("documentation", "")
+            parts = re.split(r"(#+ .+)", doc)
+
+            current_header = None
+            for part in parts:
+                if part.strip().startswith("#"):
+                    current_header = part.strip()
+                else:
+                    if current_header and part.strip():
+                        sections[current_header].append(part.strip())
+
+        # 🔥 2. Deduplicar contenido
+        merged_sections = {}
+        for header, contents in sections.items():
+            seen = set()
+            unique = []
+
+            for c in contents:
+                norm = c.strip().lower()
+                if norm not in seen:
+                    seen.add(norm)
+                    unique.append(c)
+
+            merged_sections[header] = "\n\n".join(unique)
+
+        # 🔥 3. Reconstruir doc limpio
+        doc_unido = "# Documentación del Proyecto\n\n"
+
+        for header, content in merged_sections.items():
+            doc_unido += f"{header}\n{content}\n\n"
+
+        # 🔥 4. Aplicar extra SOLO al final
+        final_doc = self.documentador.apply_extra(doc_unido, extra_requirements)
+
         return final_doc
