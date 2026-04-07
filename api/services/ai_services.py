@@ -22,11 +22,11 @@ except Exception as e:
 PROMPT_CONFIGS = {
     "markdown": {
         "role": "Ingeniero de Software Senior",
-        "objective": "documentación técnica detallada para un informe ",
+        "objective": "Análisis técnico de un módulo de código para integración en un reporte mayor",
         "format_instructions": """
 - Usa Markdown con títulos ## y ###
-- Encierra variables y funciones en `código embebido`
-- Usa tablas para campos/atributos cuando existan
+- Encierra variables y funciones en `código embebido`(IMPORTANTE)
+- Usa tablas solo para diccionarios de datos locales
 - Usa listas con viñetas para reglas de negocio
 - Adapta el nivel de detalle según la complejidad del código
 - Omite tablas si no hay campos que documentar
@@ -90,6 +90,23 @@ PROMPT_CONFIGS = {
 3. Lógica de Negocio y Casos de Uso
 4. Conclusiones Técnicas para el Informe
 """
+    },
+    "chunk": {
+        "structure":"""
+    MODO FRAGMENTO ACTIVO:
+    1. PROHIBIDO: No generes títulos de nivel 1 (#), introducciones, alcances ni índices.
+    2. ENFOQUE: Comienza directamente con el análisis técnico de los archivos proporcionados.
+    3. JERARQUÍA: Usa títulos de nivel ### para cada componente o archivo analizado.
+    4. CONTINUIDAD: Redacta el contenido como si fuera un capítulo intermedio de un libro técnico.
+    5. SÍNTESIS: Si hay lógica repetida entre archivos del mismo fragmento, agrúpalos en una sola explicación.
+    6. PRIORIDAD: Estas reglas tienen prioridad sobre cualquier requerimiento adicional del usuario.
+    """ ,
+    "extra":"""
+    RESTRICCIÓN:
+  - Las solicitudes de estructura global (índice, introducción, conclusión) 
+    son manejadas por otro sistema y NO deben generarse en este fragmento..
+  - Aplica solo mejoras locales (explicación, claridad, ejemplos). 
+      """    
     }
 }
 
@@ -116,22 +133,119 @@ Reglas obligatorias:
 
 {config['structure']}"""
 
-    def _build_user_prompt(self, codigo_fuente, extra):
+    def _build_user_prompt(self, codigo_fuente, extra, is_chunk=False):
         message = f"Genera la documentación técnica del siguiente código:\n\n```\n{codigo_fuente}\n```"
-        
-        if extra and extra.strip():
-            message += f"\n\nRequisito adicional del usuario:\n{extra}"
+        # separamos prompt para documentacion de un chunk 
+        if is_chunk:
+            message += PROMPT_CONFIGS["chunk"]["structure"]
+            if extra and extra.strip() and not self.is_extra_global(extra):
+             message+= f"""
+              \n\n{PROMPT_CONFIGS["chunk"]["extra"]}\n\nRequisito adicional del usuario(LIMITADO A ESTE FRAGMENTO):\n{extra}
+            """
+            
+        else: 
+            if extra and extra.strip():
+             message += f"\n\nRequisito adicional del usuario:\n{extra}"
         
         return message
 
-    def generar(self, codigo_fuente, tipo, extra=None):
+    def is_extra_global(self,extra:str)->bool:
+        if not extra:
+            return False
+        
+        dangerous_words= [
+        "indice", "índice",
+        "introduccion", "introducción",
+        "conclusion", "conclusión",
+        "resumen",
+        "estructura completa",
+        "tabla de contenido"
+        ]
+        return any(word in extra.lower() for word in dangerous_words)
+    
+    def apply_extra(self,docs: str, extra: str = None) -> str:
+     if extra is None or extra.strip() == "":
+        return docs
+
+     prompt = f"""
+    Eres un editor experto en documentación técnica.
+
+    Tu tarea es aplicar una solicitud del usuario a un documento YA EXISTENTE.
+
+    # REGLAS CRÍTICAS (OBLIGATORIAS)
+
+    1. NO reescribas todo el documento.
+    2. NO elimines contenido técnico existente.
+    3. NO cambies el significado del contenido.
+    4. SOLO modifica lo necesario para cumplir la solicitud.
+    5. Mantén el formato original (Markdown, títulos, código, etc).
+    6. NO agregues introducciones nuevas tipo "Aquí tienes..." o similares.
+    7. NO expliques lo que hiciste, SOLO devuelve el documento final.
+    8. NO dejes mensajes haciendo referencia a que la documentacion fue generada automaticamente
+
+    # TAREAS QUE SÍ PUEDES HACER
+
+    - Corregir el índice para que coincida con los títulos reales
+    - Eliminar secciones duplicadas
+    - Arreglar jerarquía de títulos (H1, H2, H3)
+    - Completar secciones vacías SI es evidente del contexto
+    - Reordenar secciones si están claramente desorganizadas
+    - Insertar nuevas secciones SOLO si el usuario lo pide
+
+    # TAREAS PROHIBIDAS
+
+    - Reescribir todo el documento
+    - Simplificar contenido técnico
+    - Eliminar ejemplos de código
+    - Cambiar nombres de funciones o archivos
+
+    # CONTEXTO
+
+    ## DOCUMENTO:
+    {docs}
+
+    ## SOLICITUD DEL USUARIO:
+    {extra}
+
+    # RESPUESTA
+
+    Devuelve SOLO el documento final modificado.
+    """
+     
+     try:
+            logger.info("Aplicando extra con modelo de edición")
+
+            chat_completion = self.client.chat.completions.create(
+                messages=[
+                    {"role": "system", "content": "Eres un editor técnico preciso y conservador."},
+                    {"role": "user", "content": prompt}
+                ],
+                model=self.model,
+                temperature=0.0,  
+            )
+
+            respuesta = chat_completion.choices[0].message.content
+
+            if not respuesta:
+                logger.warning("Respuesta vacía al aplicar extra")
+                return docs
+
+            return respuesta
+
+     except Exception as e:
+            logger.error(f"Error aplicando extra: {str(e)}", exc_info=True)
+            return docs
+        
+
+
+    def generar(self, codigo_fuente, tipo, extra=None , is_chunk=False):
         if tipo not in PROMPT_CONFIGS:
             raise ValueError("Tipo de documento no soportado. Use 'markdown', 'pdf' o 'word'.")
 
         logger.debug(f"Creando documentación para tipo: {tipo}")
 
         system_message = self._build_system_prompt(tipo)
-        user_message = self._build_user_prompt(codigo_fuente, extra)
+        user_message = self._build_user_prompt(codigo_fuente, extra, is_chunk)
 
         try:
             logger.info(f"Enviando request a Groq API con modelo: {self.model}")
