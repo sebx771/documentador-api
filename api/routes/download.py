@@ -87,12 +87,12 @@ def download(file_type):
                 "codigo_error": "INVALID_CONTENT_TYPE"
             }), 400
 
-        # Determinar si es archivo o JSON
+        
         if hasattr(data, 'read'):
             # Es un archivo subido
             codigo_fuente = data.read().decode('utf-8')
         else:
-            # Es JSON, verificar campo 'codigo'
+            
             if 'codigo' not in data:
                 logger.warning("Request sin campo 'codigo'")
                 return jsonify({
@@ -100,7 +100,10 @@ def download(file_type):
                     "codigo_error": "MISSING_FIELD"
                 }), 400
             codigo_fuente = data.get('codigo', '')
-        
+
+        #debug
+        logger.info(f"tipo de request{" file" if request.files else " json"}")
+        logger.info(f"extra={extra}")
         # Validar el código
         is_valid, error_response = validate.validar_codigo(
             codigo_fuente, 
@@ -113,7 +116,7 @@ def download(file_type):
             return jsonify(error_response), 400
 
         # Cache: generar hash y buscar en Redis
-        extra_str = extra or ""
+        extra_str = (extra or "").strip().lower()
         cache_key = cache.generate_hash(
             content=codigo_fuente,
             doc_type=file_type,
