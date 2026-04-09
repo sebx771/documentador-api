@@ -16,9 +16,7 @@ app = Flask(__name__)
 CORS(app)
 app.json.sort_keys = False # esto hace que el JSON tenga el mismo orden que las claves de diccionarios
 
-# Constantes de validación
-MAX_CODE_LENGTH = 50000
-MIN_CODE_LENGTH = 10
+
 
 @app.route("/", methods=["GET"])
 def welcome():
