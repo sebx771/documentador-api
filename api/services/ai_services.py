@@ -112,9 +112,10 @@ PROMPT_CONFIGS = {
 
 
 class DocumentadorIA:
-    def __init__(self, model="llama-3.3-70b-versatile"):
+    def __init__(self, model="llama-3.3-70b-versatile", ex_model="meta-llama/llama-4-scout-17b-16e-instruct"):
         self.client = client
         self.model = model
+        self.extra_model= ex_model
         logger.info(f"DocumentadorIA inicializado con modelo: {model}")
 
     def _build_system_prompt(self, tipo):
@@ -159,7 +160,35 @@ Reglas obligatorias:
         "conclusion", "conclusión",
         "resumen",
         "estructura completa",
-        "tabla de contenido"
+        "tabla de contenido",
+        "tabla de figuras",
+        "tabla de tablas",
+        "indice general",
+        "indice de contenidos",
+        "capitulo", "capítulo",
+        "sección", "seccion",
+        "subsección", "subseccion",
+        "subcapitulo", "subcapítulo",
+        "titulo principal",
+        "titulo grande",
+        "titulo extenso",
+        "encabezado",
+        "titulo"
+        "pie de pagina", "pie de página",
+        "prefacio",
+        "dedicatoria",
+        "agradecimientos",
+        "glosario",
+        "bibliografía", "bibliografia",
+        "referencias",
+        "anexo", "anexos",
+        "apéndice", "apendice",
+        "abstract",
+        "executive summary",
+        "overview",
+        "mapa conceptual",
+        "diagrama de contenidos",
+        "carpetas"
         ]
         return any(word in extra.lower() for word in dangerous_words)
     
@@ -186,6 +215,7 @@ Reglas obligatorias:
     # TAREAS QUE SÍ PUEDES HACER
 
     - Corregir el índice para que coincida con los títulos reales
+    - Añadir un h1 al coherente con el contexto "documentacion proyecto [nombre del proyecto]
     - Eliminar secciones duplicadas
     - Arreglar jerarquía de títulos (H1, H2, H3)
     - Completar secciones vacías SI es evidente del contexto
@@ -213,14 +243,14 @@ Reglas obligatorias:
     """
      
      try:
-            logger.info("Aplicando extra con modelo de edición")
+            logger.info(f"Aplicando extra con modelo de edición {self.extra_model}")
 
             chat_completion = self.client.chat.completions.create(
                 messages=[
                     {"role": "system", "content": "Eres un editor técnico preciso y conservador."},
                     {"role": "user", "content": prompt}
                 ],
-                model=self.model,
+                model=self.extra_model,
                 temperature=0.0,  
             )
 
