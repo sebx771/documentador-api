@@ -36,26 +36,42 @@ download_routes = Blueprint('download', __name__)
 
 @download_routes.route('/download',methods=['GET'])
 def download_info():
-    """"""
+    """Information endpoint for documentation download"""
     return jsonify({
-        "message": "Endpoint para descargar documentación",
+        "message": "Documentation download endpoint",
         "available_formats": ["pdf", "markdown", "docx"],
         "usage": {
             "pdf": {
                 "method": "POST",
-                "route": "api/download/pdf",
-                "description": "Genera un PDF con la documentación del código proporcionado"
+                "route": "/api/download/pdf",
+                "description": "Generates a PDF with documentation for the provided code",
+                "body": {
+                    "code": "Source code to document (required)",
+                    "extra": "Additional requirements (optional)"
+                }
             },
             "markdown": {
                 "method": "POST",
-                "route": "api/download/markdown",
-                "description": "Genera un archivo Markdown con la documentación del código proporcionado"
+                "route": "/api/download/markdown",
+                "description": "Generates a Markdown file with documentation for the provided code",
+                "body": {
+                    "code": "Source code to document (required)",
+                    "extra": "Additional requirements (optional)"
+                }
             },
             "docx": {
                 "method": "POST",
-                "route": "api/download/docx",
-                "description": "Genera un archivo Word (.docx) con la documentación del código proporcionado"
+                "route": "/api/download/docx",
+                "description": "Generates a Word (.docx) file with documentation for the provided code",
+                "body": {
+                    "code": "Source code to document (required)",
+                    "extra": "Additional requirements (optional)"
+                }
             }
+        },
+        "limits": {
+            "max_code_length": MAX_CODE_LENGTH,
+            "min_code_length": MIN_CODE_LENGTH
         }
     })
 

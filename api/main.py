@@ -21,19 +21,52 @@ app.json.sort_keys = False # esto hace que el JSON tenga el mismo orden que las 
 @app.route("/", methods=["GET"])
 def welcome():
     return jsonify({
-        "mensaje": "¡Bienvenido a EasyDocs API!",
+        "message": "Welcome to EasyDocs API!",
         "version": API_VERSION,
-      "endpoints": [
+        "endpoints": [
             {
-                "ruta": "/download/<file_type>",
-                "metodo": "POST",
-                "descripcion": "Genera documentación en el formato especificado (pdf o markdown)",
-                "parametros": {
-                    "file_type": "Tipo de archivo: 'pdf', 'markdown' o 'docx'"
+                "path": "/api/download",
+                "method": "GET",
+                "description": "Information about documentation download endpoints"
+            },
+            {
+                "path": "/api/download/<file_type>",
+                "method": "POST",
+                "description": "Generates documentation in the specified format (pdf, markdown or docx)",
+                "parameters": {
+                    "file_type": "File type: 'pdf', 'markdown' or 'docx'",
+                    "body": {
+                        "code": "Source code to document (string)",
+                        "extra": "Additional requirements (optional, string)"
+                    }
+                }
+            },
+            {
+                "path": "/api/preview-zip",
+                "method": "POST",
+                "description": "Preview contents of a ZIP file without generating documentation",
+                "parameters": {
+                    "file": "ZIP file to preview (form-data)"
+                }
+            },
+            {
+                "path": "/api/upload-zip",
+                "method": "POST",
+                "description": "Process a ZIP file and generate consolidated documentation",
+                "parameters": {
+                    "file": "ZIP file with source code (form-data)",
+                    "doc_type": "Document type: 'markdown', 'pdf' or 'word' (optional)",
+                    "extra_requirements": "Additional requirements for documentation (optional)"
                 }
             }
+        ],
+        "supported_formats": ["markdown", "pdf", "word"],
+        "features": [
+            "Intelligent cache by content hash",
+            "Multilanguage support (Python/Java/JS)",
+            "Automatic chunking for large projects",
+            "Documentation generation in multiple formats"
         ]
-,
     })
 
 # Registrar rutas
