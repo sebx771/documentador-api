@@ -112,7 +112,7 @@ PROMPT_CONFIGS = {
 
 
 class DocumentadorIA:
-    def __init__(self, model="llama-3.3-70b-versatile", ex_model="meta-llama/llama-4-scout-17b-16e-instruct"):
+    def __init__(self, model="openai/gpt-oss-120b", ex_model="meta-llama/llama-4-scout-17b-16e-instruct"):
         self.client = client
         self.model = model
         self.extra_model= ex_model
