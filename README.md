@@ -29,4 +29,11 @@ El proyecto está diseñado para ejecutarse en la infraestructura de Vercel util
 
 *Seguridad*: Las llaves de API se gestionan mediante variables de entorno en el panel de Vercel.
 
+## Documentación
+
+Consulta la documentación técnica completa:
+
+- [📄 Documentación en Español](docs/doc_es.md)
+- [📄 Documentation in English](docs/doc_en.md)
+
 
