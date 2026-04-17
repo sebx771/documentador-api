@@ -11,6 +11,7 @@ from ..services.zip_services import ZipService
 from ..services.documentation_orchestrator import DocumentationOrchestrator
 from ..services.chunking_service import ChunkingService
 from ..services.cache_service import  get_global_cache
+from ..services.rate_limiter import Ratelimiter
 
 
 # Configurar logging
@@ -20,6 +21,8 @@ logger = logging.getLogger(__name__)
 zip_routes = blueprints.Blueprint('zip', __name__)
 
 MAX_ZIP_SIZE = 10 * 1024 * 1024
+# Limitador de tasa global (compartido entre todas las solicitudes)
+global_rate_limiter = Ratelimiter(req_per_min=10, burst=1)
 
 
 @zip_routes.route('/preview-zip', methods=['POST'])
@@ -113,7 +116,8 @@ def upload_zip():
             max_input_size=MAX_ZIP_SIZE,
             max_files=50,
             chunking_service=chunking_service,
-            cache_service=cache_service
+            cache_service=cache_service,
+            rate_limiter=global_rate_limiter
         )
         
         result = orchestrator.process_zip(
