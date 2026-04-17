@@ -5,6 +5,7 @@ from typing import List, Dict, Any
 from .chunking_service import ChunkingService
 from .cache_service import CacheService
 from .ai_services import DocumentadorIA
+from .rate_limiter import Ratelimiter
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +29,8 @@ class DocumentationOrchestrator:
         max_files: int = None,
         chunking_service: ChunkingService = None,
         cache_service: CacheService = None,
-        documentador: DocumentadorIA = None
+        documentador: DocumentadorIA = None,
+        rate_limiter: Ratelimiter = None
     ):
         self.max_input_size = max_input_size or self.DEFAULT_MAX_INPUT_SIZE
         self.max_files = max_files or self.DEFAULT_MAX_FILES
@@ -36,6 +38,7 @@ class DocumentationOrchestrator:
         self.chunking_service = chunking_service or ChunkingService()
         self.cache_service = cache_service or CacheService()
         self.documentador = documentador or DocumentadorIA()
+        self.rate_limiter = rate_limiter or Ratelimiter(req_per_min=10, burst=1)
 
     def process_zip(
         self,
@@ -189,13 +192,38 @@ class DocumentationOrchestrator:
                 continue
             
             try:
-                doc_result = self.documentador.generar(
-                    codigo_fuente=chunk["content"],
-                    tipo=doc_type,
-                    extra=extra_requirements,
-                    is_chunk=True
-                )
+                doc_result = None
+                max_retries = 3
                 
+                for attempt in range(max_retries + 1):
+                    # 1. Verificar límite de tasa
+                    if self.rate_limiter.allow_request():
+                        try:
+                            logger.info(f"Chunk {idx + 1}: Intento {attempt + 1} - Generando documentación...")
+                            doc_result = self.documentador.generar(
+                                codigo_fuente=chunk["content"],
+                                tipo=doc_type,
+                                extra=extra_requirements,
+                                is_chunk=True
+                            )
+                            # Si tiene éxito, salimos del bucle de reintentos
+                            break
+                        except Exception as e:
+                            logger.warning(f"Chunk {idx + 1}: Error en intento {attempt + 1}: {str(e)}")
+                            if attempt == max_retries:
+                                raise e
+                    else:
+                        logger.warning(f"Chunk {idx + 1}: Timeout del RateLimiter en intento {attempt + 1}")
+                        if attempt == max_retries:
+                            raise Exception("No se pudo obtener permiso del limitador de tasa tras varios intentos")
+                    
+                    # Espera breve antes del próximo reintento
+                    if attempt < max_retries:
+                        time.sleep(1)
+                
+                if not doc_result:
+                    raise Exception("Fallo inesperado: doc_result es nulo tras reintentos")
+
                 result = {
                     "chunk_index": idx,
                     "files": chunk.get("files", []),
@@ -209,7 +237,7 @@ class DocumentationOrchestrator:
                 logger.info(f"Chunk {idx + 1}: documentación generada ({len(doc_result)} caracteres)")
                 
             except Exception as e:
-                logger.error(f"Error procesando chunk {idx + 1}: {str(e)}")
+                logger.error(f"Error procesando chunk {idx + 1} tras todos los reintentos: {str(e)}")
                 results.append({
                     "chunk_index": idx,
                     "files": chunk.get("files", []),
