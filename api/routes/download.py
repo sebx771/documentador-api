@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify, send_file, make_response
 from ..utils import validate, bytes_utils, get_request 
-from ..services.ai_services import DocumentadorIA
+from ..services.ai import DocumentadorIA
 from ..services.cache_service import get_global_cache
 from ..export.pdf_gen import EasyDocsPDF
 from ..export.docx_gen import EasyDocsDOCX
