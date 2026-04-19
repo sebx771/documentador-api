@@ -4,7 +4,7 @@ from typing import List, Dict, Any
 
 from .chunking_service import ChunkingService
 from .cache_service import CacheService
-from .ai_services import DocumentadorIA
+from .ai import DocumentadorIA
 from .rate_limiter import Ratelimiter
 
 logger = logging.getLogger(__name__)
@@ -85,9 +85,15 @@ class DocumentationOrchestrator:
         
         logger.info(f"Chunks creados: {len(chunks)}")
 
-        chunk_results = self._process_chunks(chunks, doc_type, extra_requirements)
+        # DETECCIÓN DE IDIOMA ÚNICA
+        # Usamos el primer chunk como muestra representativa para fijar el idioma del proyecto
+        sample_code = chunks[0]["content"] if chunks else ""
+        detected_lang = self.documentador.detect_language(sample_code, extra_requirements)
+        logger.info(f"Coherencia de idioma establecida: {detected_lang}")
 
-        final_documentation = self._consolidate_documentation(chunk_results, extra_requirements)
+        chunk_results = self._process_chunks(chunks, doc_type, extra_requirements, language=detected_lang)
+
+        final_documentation = self._consolidate_documentation(chunk_results, extra_requirements, language=detected_lang)
 
         elapsed_time = time.time() - start_time
         cache_stats = self.cache_service.get_stats()
@@ -170,7 +176,8 @@ class DocumentationOrchestrator:
         self,
         chunks: List[Dict],
         doc_type: str,
-        extra_requirements: str
+        extra_requirements: str,
+        language: str = "es"
     ) -> List[Dict]:
         """Procesa cada chunk, usando cache cuando es posible."""
         results = []
@@ -204,7 +211,8 @@ class DocumentationOrchestrator:
                                 codigo_fuente=chunk["content"],
                                 tipo=doc_type,
                                 extra=extra_requirements,
-                                is_chunk=True
+                                is_chunk=True,
+                                lang=language
                             )
                             # Si tiene éxito, salimos del bucle de reintentos
                             break
@@ -248,7 +256,7 @@ class DocumentationOrchestrator:
         
         return results
 
-    def _consolidate_documentation(self, chunk_results: List[Dict], extra_requirements: str) -> str:
+    def _consolidate_documentation(self, chunk_results: List[Dict], extra_requirements: str, language: str = "es") -> str:
         """Consolida la documentación de múltiples chunks (versión mejorada)."""
 
         if not chunk_results:
@@ -290,7 +298,8 @@ class DocumentationOrchestrator:
             merged_sections[header] = "\n\n".join(unique)
 
         # 🔥 3. Reconstruir doc limpio
-        doc_unido = "# Documentación del Proyecto\n\n"
+        titulo_principal = "# Documentación del Proyecto\n\n" if language == "es" else "# Project Documentation\n\n"
+        doc_unido = titulo_principal
 
         for header, content in merged_sections.items():
             doc_unido += f"{header}\n{content}\n\n"
