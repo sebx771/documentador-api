@@ -11,7 +11,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-API_VERSION = "2.1.0"
+API_VERSION = "2.2.0"
 app = Flask(__name__)
 CORS(app)
 app.json.sort_keys = False # esto hace que el JSON tenga el mismo orden que las claves de diccionarios
@@ -37,7 +37,8 @@ def welcome():
                     "file_type": "File type: 'pdf', 'markdown' or 'docx'",
                     "body": {
                         "code": "Source code to document (string)",
-                        "extra": "Additional requirements (optional, string)"
+                        "extra": "Additional requirements (optional, string)",
+                        "language": "Target language: 'es' or 'en' (optional, string or Accept-Language header)"
                     }
                 }
             },
@@ -56,7 +57,8 @@ def welcome():
                 "parameters": {
                     "file": "ZIP file with source code (form-data)",
                     "doc_type": "Document type: 'markdown', 'pdf' or 'word' (optional)",
-                    "extra_requirements": "Additional requirements for documentation (optional)"
+                    "extra_requirements": "Additional requirements for documentation (optional)",
+                    "language": "Target language: 'es' or 'en' (optional, string or Accept-Language header)"
                 }
             }
         ],

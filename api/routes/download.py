@@ -116,6 +116,17 @@ def download(file_type):
                     "codigo_error": "MISSING_FIELD"
                 }), 400
             codigo_fuente = data.get('codigo', '')
+        
+        # --- EXTRACCIÓN DE IDIOMA ---
+        # Puede venir en el body (data) o en headers
+        language = data.get('language') if isinstance(data, dict) else None
+        language = language or request.headers.get('Accept-Language')
+        
+        if language:
+            language = 'en' if 'en' in language.lower() else 'es'
+            logger.info(f"Idioma forzado por cliente: {language}")
+        else:
+            language = None # Permitir que el servicio de IA detecte si es None
 
         #debug
         logger.info(f"tipo de request{" file" if request.files else " json"}")
@@ -151,7 +162,7 @@ def download(file_type):
             logger.info(f"Cache MISS, generando con IA...")
             # Generar documentación con IA
             logger.info(f"Generando documentación {file_type} para el código recibido")
-            resultado_markdown = docs.generar(codigo_fuente, tipo="markdown", extra=extra_str)
+            resultado_markdown = docs.generar(codigo_fuente, tipo="markdown", extra=extra_str, lang=language)
             
             cache.set(cache_key, {
                 "documentation": resultado_markdown,

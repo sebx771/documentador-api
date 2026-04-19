@@ -45,7 +45,8 @@ class DocumentationOrchestrator:
         zip_content: bytes,
         doc_type: str = "markdown",
         extra_requirements: str = None,
-        zip_service=None
+        zip_service=None,
+        language: str = None
     ) -> Dict[str, Any]:
         """
         Procesa un ZIP y genera documentación consolidada.
@@ -86,10 +87,14 @@ class DocumentationOrchestrator:
         logger.info(f"Chunks creados: {len(chunks)}")
 
         # DETECCIÓN DE IDIOMA ÚNICA
-        # Usamos el primer chunk como muestra representativa para fijar el idioma del proyecto
-        sample_code = chunks[0]["content"] if chunks else ""
-        detected_lang = self.documentador.detect_language(sample_code, extra_requirements)
-        logger.info(f"Coherencia de idioma establecida: {detected_lang}")
+        if language:
+            detected_lang = language
+            logger.info(f"Idioma forzado vía parámetros: {detected_lang}")
+        else:
+            # Usamos el primer chunk como muestra representativa para fijar el idioma del proyecto
+            sample_code = chunks[0]["content"] if chunks else ""
+            detected_lang = self.documentador.detect_language(sample_code, extra_requirements)
+            logger.info(f"Coherencia de idioma establecida (Smart Detection): {detected_lang}")
 
         chunk_results = self._process_chunks(chunks, doc_type, extra_requirements, language=detected_lang)
 

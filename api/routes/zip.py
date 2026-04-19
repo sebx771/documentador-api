@@ -100,6 +100,13 @@ def upload_zip():
     
     extra_requirements = request.form.get('extra_requirements', '')
     
+    # --- EXTRACCIÓN DE IDIOMA ---
+    language = request.form.get('language') or request.headers.get('Accept-Language')
+    if language:
+        # Normalizar a los soportados: 'en' si contiene 'en', de lo contrario 'es'
+        language = 'en' if 'en' in language.lower() else 'es'
+        logger.info(f"Idioma forzado por cliente: {language}")
+    
     try:
         zip_service = ZipService()
         chunking_service = ChunkingService(
@@ -124,7 +131,8 @@ def upload_zip():
             zip_content=zip_content,
             doc_type=doc_type,
             extra_requirements=extra_requirements,
-            zip_service=zip_service
+            zip_service=zip_service,
+            language=language
         )
         
         elapsed = time.time() - start_time
