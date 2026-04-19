@@ -1,77 +1,102 @@
-from fpdf import FPDF
-import re
+from markdown_pdf import MarkdownPdf, Section
+import io
 
-class EasyDocsPDF(FPDF):
+class EasyDocsPDF:
     """
-    Clase refinada para exorcizar el Markdown y manifestarlo en el plano físico del PDF.
-    He eliminado 'FpdfInherit' porque ya estás heredando de FPDF directamente.
+    Clase modernizada para convertir Markdown en PDF usando markdown-pdf.
+    Soporta tablas, bloques de código y diseño responsivo basado en CSS.
     """
     
-    def header(self):
-        # Encabezado con energía institucional
-        self.set_font('Arial', 'B', 15)
-        self.set_text_color(0, 51, 102)
-        self.cell(0, 10, 'Reporte de Documentación Técnica ', 0, 1, 'C')
-        self.ln(5)
-
-    def footer(self):
-        # Sello de pie de página para rastrear el flujo de páginas
-        self.set_y(-15)
-        self.set_font('Arial', 'I', 8)
-        self.set_text_color(128, 128, 128)
-        self.cell(0, 10, f'Página {self.page_no()}', 0, 0, 'C')
+    def __init__(self):
+        self.pdf = MarkdownPdf(toc_level=2)
+        # Diseño moderno con CSS
+        self.css = """
+            @page {
+                margin: 25mm;
+            }
+            body { 
+                font-family: 'Helvetica', 'Arial', sans-serif; 
+                line-height: 1.6; 
+                color: #333; 
+            }
+            h1, h2 { 
+                color: #1f497d; 
+                border-bottom: 1px solid #eee; 
+                padding-bottom: 8px;
+                margin-top: 24px;
+            }
+            h3 {
+                color: #2e75b6;
+            }
+            code { 
+                background-color: #f4f4f4; 
+                padding: 2px 4px; 
+                border-radius: 3px; 
+                font-family: 'Courier New', monospace;
+                font-size: 0.9em;
+                color: #d63384;
+            }
+            pre { 
+                background-color: #f8f9fa; 
+                border-left: 4px solid #1f497d;
+                padding: 12px; 
+                overflow-x: auto;
+                margin: 16px 0;
+            }
+            pre code { 
+                background-color: transparent; 
+                padding: 0; 
+                color: #212529;
+            }
+            table { 
+                width: 100%; 
+                border-collapse: collapse; 
+                margin: 20px 0; 
+            }
+            th { 
+                background-color: #f2f2f2; 
+                border: 1px solid #ddd; 
+                padding: 10px; 
+                text-align: left;
+                font-weight: bold;
+            }
+            td { 
+                border: 1px solid #ddd; 
+                padding: 8px; 
+            }
+            tr:nth-child(even) {
+                background-color: #fafafa;
+            }
+            .header {
+                text-align: center;
+                font-size: 10pt;
+                color: #888;
+                border-bottom: 0.5pt solid #ccc;
+                margin-bottom: 20px;
+                padding-bottom: 5px;
+            }
+        """
 
     def construir_desde_markdown(self, texto_md):
         """
-        Ritual de Transmutación: Convierte el caos del Markdown en orden PDF.
+        Convierte el Markdown en una sección del PDF con estilos modernos.
         """
-        lineas = texto_md.split('\n')
-        en_bloque_codigo = False
+        # Añadimos un encabezado visual al HTML
+        header_html = '<div class="header">Reporte de Documentación Técnica - easyDocs</div>'
+        
+        # Combinamos el encabezado con el contenido (el contenido será parseado de MD a HTML por la librería)
+        # Nota: La librería markdown-pdf procesa el texto de la Sección como Markdown.
+        # Para incluir HTML puro, podemos usar etiquetas HTML dentro del MD si el parser lo permite
+        # o simplemente confiar en que el parser maneja bien el contenido.
+        
+        contenido_completo = f"{header_html}\n\n{texto_md}"
+        self.pdf.add_section(Section(contenido_completo), user_css=self.css)
 
-        for linea in lineas:
-            # 1. El Dominio del Código (```)
-            # Si detectamos las comillas triples, entramos o salimos del estado de vacío
-            if linea.strip().startswith('```'):
-                en_bloque_codigo = not en_bloque_codigo
-                continue 
-            
-            if en_bloque_codigo:
-                self.set_font('Courier', '', 10)
-                self.set_fill_color(240, 240, 240) # Fondo gris de protección
-                # Imprimimos el código con un ligero margen para que no toque los bordes
-                self.multi_cell(0, 5, linea, fill=True)
-                continue
-
-            # 2. Exorcismo de Títulos (##)
-            if linea.strip().startswith('##'):
-                self.ln(5) # Espacio de respeto antes del título
-                self.set_font('Arial', 'B', 14)
-                self.set_text_color(31, 73, 125) 
-                
-                # Eliminamos los restos de la maldición '##'
-                titulo_limpio = re.sub(r'^#+\s*', '', linea)
-                self.multi_cell(0, 10, titulo_limpio)
-                
-                self.set_text_color(0, 0, 0) # Retorno al equilibrio (negro)
-                self.ln(2)
-                continue
-
-            # 3. Purificación de Caracteres (Negritas, Itálicas y Código inline)
-            # Eliminamos **, *, ` y los # que sobran
-            linea_limpia = re.sub(r'\*\*|\*|`|#', '', linea)
-
-            # 4. Barrera contra Tablas de Markdown (|---|)
-            # Si la línea es solo decorativa de tabla, la desintegramos
-            if re.match(r'^[\s|:-]*$', linea_limpia) and '|' in linea:
-                continue
-            
-            # Limpiamos las barras laterales si es una fila de datos para que sea legible
-            linea_limpia = linea_limpia.replace('|', '  ').strip()
-
-            # 5. Manifestación del Cuerpo del Texto
-            self.set_font('Arial', '', 11)
-            if not linea_limpia:
-                self.ln(3) # Salto de línea por vacío
-            else:
-                # Dibujamos el texto final ya purificado
-                self.multi_cell(0, 7, linea_limpia)
+    def output(self, dest='S'):
+        """
+        Retorna el contenido del PDF. 
+        Para mantener compatibilidad con la firma anterior, aceptamos 'dest'.
+        """
+        buffer = io.BytesIO()
+        self.pdf.save(buffer)
+        return buffer.getvalue()
