@@ -1,4 +1,3 @@
-import hashlib
 import logging
 from typing import List, Dict, Any
 
@@ -11,19 +10,16 @@ class ChunkingService:
     Optimizado para serverless con límites configurables.
     """
 
-    DEFAULT_CHUNK_MAX_SIZE = 8000
-    DEFAULT_FILES_PER_CHUNK = 10
-    DEFAULT_MAX_TOKENS = 12000
+    DEFAULT_CHUNK_MAX_SIZE = 5000
+    DEFAULT_FILES_PER_CHUNK = 3
 
     def __init__(
         self,
         max_chunk_size: int = None,
-        max_files_per_chunk: int = None,
-        max_tokens_estimate: int = None
+        max_files_per_chunk: int = None
     ):
         self.max_chunk_size = max_chunk_size or self.DEFAULT_CHUNK_MAX_SIZE
         self.max_files_per_chunk = max_files_per_chunk or self.DEFAULT_FILES_PER_CHUNK
-        self.max_tokens_estimate = max_tokens_estimate or self.DEFAULT_MAX_TOKENS
 
     def create_chunks(
         self,
