@@ -29,8 +29,7 @@ class DocumentationOrchestrator:
         max_files: int = None,
         chunking_service: ChunkingService = None,
         cache_service: CacheService = None,
-        documentador: DocumentadorIA = None,
-        rate_limiter: Ratelimiter = None
+        documentador: DocumentadorIA = None
     ):
         self.max_input_size = max_input_size or self.DEFAULT_MAX_INPUT_SIZE
         self.max_files = max_files or self.DEFAULT_MAX_FILES
@@ -38,8 +37,6 @@ class DocumentationOrchestrator:
         self.chunking_service = chunking_service or ChunkingService()
         self.cache_service = cache_service or CacheService()
         self.documentador = documentador or DocumentadorIA()
-        self.rate_limiter = rate_limiter or Ratelimiter(req_per_min=10, burst=1)
-
     def process_zip(
         self,
         zip_content: bytes,
@@ -204,38 +201,17 @@ class DocumentationOrchestrator:
                 continue
             
             try:
-                doc_result = None
-                max_retries = 3
-                
-                for attempt in range(max_retries + 1):
-                    # 1. Verificar límite de tasa
-                    if self.rate_limiter.allow_request():
-                        try:
-                            logger.info(f"Chunk {idx + 1}: Intento {attempt + 1} - Generando documentación...")
-                            doc_result = self.documentador.generar(
-                                codigo_fuente=chunk["content"],
-                                tipo=doc_type,
-                                extra=extra_requirements,
-                                is_chunk=True,
-                                lang=language
-                            )
-                            # Si tiene éxito, salimos del bucle de reintentos
-                            break
-                        except Exception as e:
-                            logger.warning(f"Chunk {idx + 1}: Error en intento {attempt + 1}: {str(e)}")
-                            if attempt == max_retries:
-                                raise e
-                    else:
-                        logger.warning(f"Chunk {idx + 1}: Timeout del RateLimiter en intento {attempt + 1}")
-                        if attempt == max_retries:
-                            raise Exception("No se pudo obtener permiso del limitador de tasa tras varios intentos")
-                    
-                    # Espera breve antes del próximo reintento
-                    if attempt < max_retries:
-                        time.sleep(1)
-                
-                if not doc_result:
-                    raise Exception("Fallo inesperado: doc_result es nulo tras reintentos")
+                # El servicio de IA ahora maneja internamente:
+                # 1. Estimación de tokens
+                # 2. Rate limiting (pasando tokens_needed)
+                # 3. Reintentos y Fallback de modelos
+                doc_result = self.documentador.generar(
+                    codigo_fuente=chunk["content"],
+                    tipo=doc_type,
+                    extra=extra_requirements,
+                    is_chunk=True,
+                    lang=language
+                )
 
                 result = {
                     "chunk_index": idx,
@@ -250,7 +226,7 @@ class DocumentationOrchestrator:
                 logger.info(f"Chunk {idx + 1}: documentación generada ({len(doc_result)} caracteres)")
                 
             except Exception as e:
-                logger.error(f"Error procesando chunk {idx + 1} tras todos los reintentos: {str(e)}")
+                logger.error(f"Error procesando chunk {idx + 1}: {str(e)}")
                 results.append({
                     "chunk_index": idx,
                     "files": chunk.get("files", []),
@@ -275,7 +251,7 @@ class DocumentationOrchestrator:
 
         sections = defaultdict(list)
 
-        # 🔥 1. Separar por headers
+        #  1. Separar por headers
         for result in chunk_results:
             doc = result.get("documentation", "")
             parts = re.split(r"(#+ .+)", doc)
@@ -288,7 +264,7 @@ class DocumentationOrchestrator:
                     if current_header and part.strip():
                         sections[current_header].append(part.strip())
 
-        # 🔥 2. Deduplicar contenido
+        #  2. Deduplicar contenido
         merged_sections = {}
         for header, contents in sections.items():
             seen = set()
@@ -302,14 +278,14 @@ class DocumentationOrchestrator:
 
             merged_sections[header] = "\n\n".join(unique)
 
-        # 🔥 3. Reconstruir doc limpio
+        #  3. Reconstruir doc limpio
         titulo_principal = "# Documentación del Proyecto\n\n" if language == "es" else "# Project Documentation\n\n"
         doc_unido = titulo_principal
 
         for header, content in merged_sections.items():
             doc_unido += f"{header}\n{content}\n\n"
 
-        # 🔥 4. Aplicar extra SOLO al final
-        final_doc = self.documentador.apply_extra(doc_unido, extra_requirements)
+        #  4. Aplicar extra SOLO al final, manteniendo el idioma correcto
+        final_doc = self.documentador.apply_extra(doc_unido, extra_requirements, lang=language)
 
         return final_doc
