@@ -5,7 +5,6 @@ from typing import List, Dict, Any
 from .chunking_service import ChunkingService
 from .cache_service import CacheService
 from .ai import DocumentadorIA
-from .rate_limiter import Ratelimiter
 
 logger = logging.getLogger(__name__)
 
