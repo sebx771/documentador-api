@@ -26,17 +26,16 @@ class Ratelimiter:
         self.req_per_min = req_per_min
         self.tokens_per_min = tokens_per_min
         
-        # Si usamos TPM, el "bucket size" es el TPM. Si no, es el RPM.
-        
+        # Calcula límites
         self.max_capacity = int(self.req_per_min * burst_factor)
-        self.max_token_capacity= int(self.tokens_per_min * burst_factor)
-        self.refill_rate = self.req_per_min / 60.0  # Tokens (o peticiones) por segundo
-        self.refill_token_rate = self.tokens_per_min / 60.0
+        self.max_token_capacity = int(self.tokens_per_min * burst_factor) if self.tokens_per_min > 0 else self.max_capacity
+        self.refill_rate = self.req_per_min / 60.0  # peticiones por segundo
+        self.refill_token_rate = self.tokens_per_min / 60.0 if self.tokens_per_min > 0 else self.refill_rate
         
-        self.timeout = 30  # Aumentamos el timeout para esperar a que se recarguen los tokens
+        self.timeout = 30  # tiempo máximo de espera en segundos
         self.key_prefix = key_prefix
         
-        logger.info(f"Ratelimiter [{key_prefix}] -> Limit: {self.refill_rate}/min, Refill: {self.refill_rate:.2f}/s, Burst: {self.max_capacity}")
+        logger.info(f"Ratelimiter [{key_prefix}] -> RPM: {self.refill_rate}/s, TPM: {self.refill_token_rate}/s, Capacidad: {self.max_capacity}")
 
         try:
             pool = redis.ConnectionPool.from_url(
@@ -81,44 +80,70 @@ class Ratelimiter:
     def allow_request(self, tokens_requested: int = 1) -> bool:
         """
         Verifica si se permiten los tokens solicitados.
-        Si no hay suficientes, espera hasta que el timeout expire.
-        Verifica tanto RPM como TPM simultáneamente.
+        Usa algoritmo Token Bucket con límites separados para RPM y TPM.
+        
+        IMPORTANTE: Si Redis no está disponible, RECHAZA la request (fallar cerrado)
+        para proteger contra rate limits de APIs externas.
         """
-        start_time = time.time()
-        
-        req_tokens_key = f"{self.key_prefix}:req:tokens"
-        req_ts_key = f"{self.key_prefix}:req:timestamp"
-        
-        tok_tokens_key = f"{self.key_prefix}:tok:tokens"
-        tok_ts_key = f"{self.key_prefix}:tok:timestamp"
+        req_tokens_key = f"{self.key_prefix}:req"
+        tok_tokens_key = f"{self.key_prefix}:tok"
 
-        while True:
-            now = time.time()
-            try:
-                result_req = self._script(
-                    keys=[req_tokens_key, req_ts_key],
-                    args=[self.refill_rate, self.max_capacity, now, 1]
-                )
-                
-                result_tok = self._script(
-                    keys=[tok_tokens_key, tok_ts_key],
-                    args=[self.refill_token_rate, self.max_token_capacity, now, tokens_requested]
-                )
-                
-                if result_req[0] == 1 and result_tok[0] == 1:
-                    return True
-                
-                if now - start_time > self.timeout:
-                    current_req = result_req[1]
-                    current_tok = result_tok[1]
-                    logger.warning(
-                        f"RateLimiter [{self.key_prefix}]: Timeout. "
-                        f"Req: {current_req}, Tok: {current_tok}"
-                    )
-                    return False
-                
-                time.sleep(1.0)
-                
-            except Exception as e:
-                logger.error(f"Error en RateLimiter ({self.key_prefix}): {e}")
+        now = time.time()
+        try:
+            # Validar que Redis está conectado
+            if not self.redis:
+                logger.critical(f"Redis no disponible en {self.key_prefix}. Rechazando request.")
+                return False
+            
+            # Ejecutar script Lua para verificar RPM (requests per minute)
+            result_req = self._script(
+                keys=[req_tokens_key + ":tokens", req_tokens_key + ":timestamp"],
+                args=[self.refill_rate, self.max_capacity, now, 1]
+            )
+            
+            # Validar formato de respuesta
+            if not isinstance(result_req, (list, tuple)) or len(result_req) < 2:
+                logger.error(f"Respuesta Lua inválida para RPM: {result_req}. Rechazando.")
+                return False
+            
+            # Ejecutar script Lua para verificar TPM (tokens per minute)
+            result_tok = self._script(
+                keys=[tok_tokens_key + ":tokens", tok_tokens_key + ":timestamp"],
+                args=[self.refill_token_rate, self.max_token_capacity, now, tokens_requested]
+            )
+            
+            # Validar formato de respuesta
+            if not isinstance(result_tok, (list, tuple)) or len(result_tok) < 2:
+                logger.error(f"Respuesta Lua inválida para TPM: {result_tok}. Rechazando.")
+                return False
+            
+            # Ambos límites deben aprobar (ambos retornan 1)
+            rpm_allowed = int(result_req[0]) == 1
+            tpm_allowed = int(result_tok[0]) == 1
+            
+            if rpm_allowed and tpm_allowed:
+                logger.debug(f"Request permitida en {self.key_prefix} ({tokens_requested} tokens)")
                 return True
+            else:
+                remaining_req = float(result_req[1]) if result_req[1] else 0
+                remaining_tok = float(result_tok[1]) if result_tok[1] else 0
+                logger.warning(
+                    f"Rate limit excedido en {self.key_prefix}: "
+                    f"RPM={'✓' if rpm_allowed else '✗'} ({remaining_req:.0f} reqs), "
+                    f"TPM={'✓' if tpm_allowed else '✗'} ({remaining_tok:.0f} tokens)"
+                )
+                return False
+            
+        except redis.ConnectionError as e:
+            logger.critical(
+                f"Redis DESCONECTADO en {self.key_prefix}. "
+                f"Rate limiting desactivado. Error: {e}"
+            )
+            return False
+        
+        except Exception as e:
+            logger.critical(
+                f"Error CRÍTICO en RateLimiter ({self.key_prefix}): {type(e).__name__}: {e}. "
+                f"Rechazando request por seguridad."
+            )
+            return False
