@@ -31,15 +31,35 @@ class DocumentadorIA:
 
     def estimate_tokens(self, system_prompt: str, user_prompt: str) -> int:
         """
-        Estimación conservadora de tokens para el par (system + user).
-        Heurística: 1 token ≈ 4 caracteres (estándar OpenAI/Groq),
-        más un margen de respuesta esperada de 1500 tokens.
-        Este valor se usa para verificar el rate limit ANTES de llamar a la API.
+        Estimación mejorada de tokens para el par (system + user).
+        
+        Heurística:
+        - Input: 1 token ≈ 3.5 caracteres (más preciso que 4)
+        - Output: Estimamos 30-50% del tamaño de input (varía según complejidad)
+        
+        Esta estimación se usa para verificar rate limits ANTES de llamar a API.
         """
-        combined = system_prompt + user_prompt
-        input_tokens = len(combined) // 4   # 1 token ~ 4 chars (heurística estándar)
-        expected_output_tokens = 1500       # Margen de respuesta razonable
-        return input_tokens + expected_output_tokens
+        system_len = len(system_prompt)
+        user_len = len(user_prompt)
+        
+        # Estimación de input tokens (más preciso)
+        input_tokens = int((system_len + user_len) / 3.5)
+        
+        # Estimación de output tokens (adaptativo)
+        # Documentación típica: 40-60% del tamaño del input
+        # Chunks: 30-40% del input
+        # Final docs: 50-60% del input
+        # Promedio conservador: 45%
+        expected_output_tokens = max(500, int(input_tokens * 0.45))
+        
+        total = input_tokens + expected_output_tokens
+        
+        logger.debug(
+            f"Token estimation: input={system_len + user_len} chars → "
+            f"{input_tokens} input tokens + {expected_output_tokens} output tokens = {total} total"
+        )
+        
+        return total
 
     def _clean_think_tags(self, text: str) -> str:
         """Elimina las etiquetas <think>...</think> y su contenido de la respuesta."""

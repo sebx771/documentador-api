@@ -11,10 +11,11 @@ def get_groq_client():
     """
     Inicializa y retorna el cliente de Groq.
     """
-    api_key = os.getenv("API_KEY")
+    # Busca GROQ_API_KEY primero (nombre estándar), luego API_KEY (legacy)
+    api_key = os.getenv("GROQ_API_KEY") or os.getenv("API_KEY")
     if not api_key:
-        logger.error("API_KEY no encontrada en variables de entorno")
-        raise ValueError("API_KEY no configurada. Configure la variable de entorno API_KEY")
+        logger.error("GROQ_API_KEY o API_KEY no encontrada en variables de entorno")
+        raise ValueError("API key no configurada. Configure GROQ_API_KEY o API_KEY")
 
     try:
         client = Groq(api_key=api_key)
