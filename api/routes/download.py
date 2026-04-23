@@ -29,7 +29,8 @@ def documentador_ia():
     if  doc is None:
         doc = DocumentadorIA()
     return doc
-    
+
+
 
 
 download_routes = Blueprint('download', __name__)
@@ -78,6 +79,7 @@ def download_info():
 @download_routes.route('/download/<file_type>', methods=['POST'])
 def download(file_type):
     docs= documentador_ia()
+    
     start_time = time.time()
     """
     Endpoint unificado para descargar documentación en diferentes formatos.
@@ -226,6 +228,7 @@ def _generar_pdf(contenido, cache_stats=None, elapsed_time=0.0, from_cache=False
     )
     
     
+
 def _generar_docx(contenido, cache_stats=None, elapsed_time=0.0, from_cache=False):
     """Genera y retorna un archivo DOCX."""
     logger.info(f"DOCX generado exitosamente (cache: {from_cache}, time: {elapsed_time:.2f}s)")
