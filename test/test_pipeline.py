@@ -42,11 +42,11 @@ def test_zip_processing():
         print(f"    Cache hit rate: {result['metadata']['cache_stats']['hit_rate_percent']}%")
         print(f"    Docs length: {len(result['documentation']):,} chars")
         
-        print("\n[5] Cache stats:")
         stats = result['metadata']['cache_stats']
-        print(f"    Hits: {stats['hits']}")
-        print(f"    Misses: {stats['misses']}")
-        print(f"    Evictions: {stats['evictions']}")
+        print("\n[5] Cache stats:")
+        print(f"    Hits: {stats.get('hits', 0)}")
+        print(f"    Misses: {stats.get('misses', 0)}")
+        print(f"    Evictions: {stats.get('evictions', 0)}")
         
         print("\n" + "=" * 50)
         print("SUCCESS - Pipeline funcionando correctamente")
