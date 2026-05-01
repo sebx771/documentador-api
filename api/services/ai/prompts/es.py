@@ -23,42 +23,6 @@ ES_CONFIGS = {
 5. ## 4. Manejo de Errores y Excepciones (Usa Tablas)
 6. ## 5. Guía de Integración / Uso
 """
-    },
-    "pdf": {
-        "role": "Ingeniero de Software Senior",
-        "objective": "Informe Técnico Formal para exportación a PDF",
-        "format_instructions": """
-- NO uses tablas de Markdown (ej. |---|). Usa listas con guiones para describir variables.
-- NO uses negritas con asteriscos (ej. **texto**). Escribe el texto limpio.
-- Para los títulos de sección, usa ÚNICAMENTE el prefijo '## ' seguido del nombre.
-- Los bloques de código deben ir entre triple comilla inversa ``` solo al inicio y al final.
-- NO uses caracteres especiales como emojis o símbolos complejos fuera de Latin-1.
-- Explica la lógica paso a paso de forma profesional.
-""",
-        "structure": """
-### Secciones requeridas:
-1. Introducción y Alcance del Código
-2. Diccionario de Datos (Campos, tipos y propósitos)
-3. Lógica de Negocio y Casos de Uso
-4. Conclusiones Técnicas para el Informe
-"""
-    },
-    "word": {
-        "role": "Analista de Desarrollo de Software",
-        "objective": "Documento de Requerimientos Técnicos en Microsoft Word",
-        "format_instructions": """
-- Genera descripciones detalladas y extensas
-- Estructura con títulos claros de secciones Word
-- Incluye Glosario Técnico si hay términos complejos
-- Redacta reglas de negocio como requerimientos funcionales
-""",
-        "structure": """
-### Secciones requeridas:
-1. Introducción y Alcance del Código
-2. Diccionario de Datos (Campos, tipos y propósitos)
-3. Lógica de Negocio y Casos de Uso
-4. Conclusiones Técnicas para el Informe
-"""
     }
 }
 

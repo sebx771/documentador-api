@@ -23,43 +23,8 @@ EN_CONFIGS = {
 5. ## 4. Error & Exception Handling (Use Tables)
 6. ## 5. Integration / Usage Guide
 """
-    },
-    "pdf": {
-        "role": "Senior Software Engineer",
-        "objective": "Formal Technical Report for PDF export",
-        "format_instructions": """
-- DO NOT use Markdown tables (e.g., |---|). Use hyphenated lists to describe variables.
-- DO NOT use bold with asterisks (e.g., **text**). Write clean text.
-- For section headings, use ONLY the '## ' prefix followed by the name.
-- Code blocks must be between triple backticks ``` only at the start and end.
-- DO NOT use special characters like emojis or complex symbols outside of Latin-1.
-- Explain logic step-by-step professionally.
-""",
-        "structure": """
-### Required Sections:
-1. Introduction and Code Scope
-2. Data Dictionary (Fields, types, and purposes)
-3. Business Logic and Use Cases
-4. Technical Conclusions for the Report
-"""
-    },
-    "word": {
-        "role": "Software Development Analyst",
-        "objective": "Technical Requirements Document in Microsoft Word",
-        "format_instructions": """
-- Generate detailed and extensive descriptions
-- Structure with clear Word section headings
-- Include a Technical Glossary if there are complex terms
-- Write business rules as functional requirements
-""",
-        "structure": """
-### Required Sections:
-1. Introduction and Code Scope
-2. Data Dictionary (Fields, types, and purposes)
-3. Business Logic and Use Cases
-4. Technical Conclusions for the Report
-"""
     }
+
 }
 
 EN_REFERENCE_TEMPLATE = """
