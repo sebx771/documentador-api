@@ -184,11 +184,11 @@ def _generar_pdf(contenido, cache_stats=None, elapsed_time=0.0, from_cache=False
     
     # Crear el PDF
     pdf = EasyDocsPDF()
-    pdf.add_page()
+
     pdf.construir_desde_markdown(contenido)
     
     # Preparar descarga en memoria
-    pdf_bytes = pdf.output(dest='S').encode('latin-1')
+    pdf_bytes = pdf.output(dest='S')
     archivo_virtual = bytes_utils.preparar_descarga(pdf_bytes)
     
     
