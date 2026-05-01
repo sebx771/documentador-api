@@ -5,6 +5,15 @@ Todos los cambios notables en EasyDocs se documenta en este archivo.
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 y este proyecto sigue [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.1] - 2026/05/1
+
+### 🐛 fixed
+- arregla generacion pdf de la ruta */api/upload-zip*
+
+### changed
+- remueve keys del diccionario de prompts innecesarias 
+
+
 ## [2.3.0] - 2026-04-22
 
 ### ✨ Added
