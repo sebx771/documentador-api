@@ -1,7 +1,7 @@
 from datetime import datetime
 import requests
 
-URL = "http://127.0.0.1:5000/api/download/pdf"  # ajusta a tu endpoint
+URL = "http://127.0.0.1:5000/api/upload-zip"  # ajusta a tu endpoint
 
 def enviar_archivo(ruta_archivo, tipo="markdown", extra=None):
     with open(ruta_archivo, "rb") as f:
@@ -23,8 +23,8 @@ def enviar_archivo(ruta_archivo, tipo="markdown", extra=None):
         return response.content
 
 if __name__ == "__main__":
-   for i in range(5):
-    file= enviar_archivo("config.py", "markdown", "habla de las dependencias y su posible función en el proyecto")
+   for i in range(1):
+    file= enviar_archivo("PaginaWebHTML-main.zip", "markdown", "habla de las dependencias , tambien haz un esquema de flujo y su posible función en el proyecto")
   
    with open(f"documentacion{datetime.now().strftime('%Y%m%d%H%M%S')}.pdf", "wb") as f:
         f.write(file)
