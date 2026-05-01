@@ -98,7 +98,7 @@ class DocumentadorIA:
         if not model_role:
             model_role = "chunking" if is_chunk else "final_doc"
         
-        target_model = models[model_role]["id"]
+    
         
         # Intentar con fallback si el principal falla
         retry_queue = [
