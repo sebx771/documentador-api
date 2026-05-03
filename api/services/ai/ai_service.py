@@ -22,12 +22,16 @@ class DocumentadorIA:
         """Inicializa un limitador de tokens para cada modelo configurado."""
         for role, config in models.items():
             model_id = config["id"]
+            model_tpm= config["tpm"]
             # Usamos el model_id como prefijo para que cada modelo tenga su propio bucket en Redis
             safe_prefix = f"rate:{model_id.replace('/', ':')}"
-            self.limiters[model_id] = Ratelimiter(
+            self.limiters[model_id] = {
+              "ratelimiter":Ratelimiter(
                 tokens_per_min=config["tpm"],
                 key_prefix=safe_prefix
-            )
+            ), 
+              "tpm": model_tpm
+            }
 
     def estimate_tokens(self, system_prompt: str, user_prompt: str) -> int:
         """
@@ -120,11 +124,8 @@ class DocumentadorIA:
         for current_model in retry_queue:
             try:
                 # 2. Gestión de Rate Limit (TPM)
-                limiter = self.limiters.get(current_model)
-                model_tpm = next(
-                    (cfg["tpm"] for cfg in models.values() if cfg["id"] == current_model),
-                    None
-                )
+                limiter = self.limiters.get(current_model,{}).get("ratelimiter")
+                model_tpm = self.limiters.get(current_model,{}).get("tpm")
 
                 # Si la petición por sí sola supera el TPM del modelo, ni intentamos
                 if model_tpm and tokens_needed > model_tpm:
@@ -232,5 +233,6 @@ Reglas obligatorias:
     
     def apply_extra(self, docs: str, extra: str = None, lang: str = None) -> str:
         """Aplica requisitos extras al documento final, respetando el idioma original."""
+        logger.info("aplicando extra a la documentacion ")
         if not extra or not extra.strip(): return docs
-        return self.generar(docs, "markdown", extra=extra, is_chunk=False, model_role="final_doc", lang=lang)
+        return self.generar(docs, tipo="markdown", extra=extra, is_chunk=False, model_role="final_doc", lang=lang)
