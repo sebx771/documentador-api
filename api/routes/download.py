@@ -1,12 +1,14 @@
-﻿from flask import Blueprint, request, jsonify, send_file
+import io
+from flask import Blueprint, request, jsonify, send_file
 from ..utils import get_request
-from ..controllers.download_controller import get_download_info, process_download
+from ..controllers.download_controller import DownloadController
 
 download_routes = Blueprint('download', __name__)
+controller = DownloadController()
 
 @download_routes.route('/download',methods=['GET'])
 def download_info():
-    data = get_download_info()
+    data = controller.get_download_info()
     return jsonify(data)
 
 @download_routes.route('/download/<file_type>', methods=['POST'])
@@ -26,14 +28,15 @@ def download(file_type):
     if language:
         language = 'en' if 'en' in language.lower() else 'es'
     
-    result = process_download(file_type, codigo_fuente, extra, language)
+    result = controller.process_download(file_type, codigo_fuente, extra, language)
     
     if result['type'] == 'json':
         return jsonify(result['data']), result.get('status', 200)
     elif result['type'] == 'file':
         return send_file(
-            result['content'],
+            io.BytesIO(result['content']),
             mimetype=result['mimetype'],
             as_attachment=True,
             download_name=result['filename']
         )
+

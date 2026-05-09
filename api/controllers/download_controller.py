@@ -1,4 +1,4 @@
-﻿from ..services.ai import DocumentadorIA
+from ..services.ai import DocumentadorIA
 from ..services.cache_service import get_global_cache
 from ..export.pdf_gen import EasyDocsPDF
 from ..export.docx_gen import EasyDocsDOCX
@@ -18,203 +18,198 @@ logger = logging.getLogger(__name__)
 MAX_CODE_LENGTH = 50000
 MIN_CODE_LENGTH = 10
 
-# Inicializar servicios
-doc = DocumentadorIA()
-cache = get_global_cache(max_size=100)
+class DownloadController:
+    def __init__(self):
+        self.doc = DocumentadorIA()
+        self.cache = get_global_cache(max_size=100)
+        self.max_code_length = MAX_CODE_LENGTH
+        self.min_code_length = MIN_CODE_LENGTH
 
-def documentador_ia():
-    global doc
-    if  doc is None:
-        doc = DocumentadorIA()
-    return doc
-
-
-def get_download_info():
-    """Information endpoint for documentation download"""
-    return {
-        "message": "Documentation download endpoint",
-        "available_formats": ["pdf", "markdown", "docx"],
-        "usage": {
-            "pdf": {
-                "method": "POST",
-                "route": "/api/download/pdf",
-                "description": "Generates a PDF with documentation for the provided code",
-                "body": {
-                    "code": "Source code to document (required)",
-                    "extra": "Additional requirements (optional)"
+    def get_download_info(self):
+        """Endpoint de información para la descarga de documentación"""
+        return {
+            "mensaje": "Endpoint de descarga de documentación",
+            "formatos_disponibles": ["pdf", "markdown", "docx"],
+            "uso": {
+                "pdf": {
+                    "metodo": "POST",
+                    "ruta": "/api/download/pdf",
+                    "descripcion": "Genera un PDF con la documentación del código proporcionado",
+                    "cuerpo": {
+                        "codigo": "Código fuente a documentar (requerido)",
+                        "extra": "Requisitos adicionales (opcional)"
+                    }
+                },
+                "markdown": {
+                    "metodo": "POST",
+                    "ruta": "/api/download/markdown",
+                    "descripcion": "Genera un archivo Markdown con la documentación del código proporcionado",
+                    "cuerpo": {
+                        "codigo": "Código fuente a documentar (requerido)",
+                        "extra": "Requisitos adicionales (opcional)"
+                    }
+                },
+                "docx": {
+                    "metodo": "POST",
+                    "ruta": "/api/download/docx",
+                    "descripcion": "Genera un archivo Word (.docx) con la documentación del código proporcionado",
+                    "cuerpo": {
+                        "codigo": "Código fuente a documentar (requerido)",
+                        "extra": "Requisitos adicionales (opcional)"
+                    }
                 }
             },
-            "markdown": {
-                "method": "POST",
-                "route": "/api/download/markdown",
-                "description": "Generates a Markdown file with documentation for the provided code",
-                "body": {
-                    "code": "Source code to document (required)",
-                    "extra": "Additional requirements (optional)"
-                }
-            },
-            "docx": {
-                "method": "POST",
-                "route": "/api/download/docx",
-                "description": "Generates a Word (.docx) file with documentation for the provided code",
-                "body": {
-                    "code": "Source code to document (required)",
-                    "extra": "Additional requirements (optional)"
-                }
+            "limites": {
+                "max_code_length": self.max_code_length,
+                "min_code_length": self.min_code_length
             }
-        },
-        "limits": {
-            "max_code_length": MAX_CODE_LENGTH,
-            "min_code_length": MIN_CODE_LENGTH
         }
-    }
 
+    def process_download(self, file_type, codigo_fuente, extra, language):
+        """
+        Procesa la descarga de documentación en diferentes formatos.
+        
+        Args:
+            file_type: Tipo de archivo ('pdf', 'markdown', 'docx')
+            codigo_fuente: Cadena con el código fuente
+            extra: Requisitos adicionales
+            language: Preferencia de idioma ('en', 'es', o None)
+        """
+        start_time = time.time()
+        try:
+            # Validar tipo de archivo
+            if file_type not in ['pdf', 'markdown', 'docx']:
+                return {
+                    'type': 'json',
+                    'data': {
+                        "error": "Tipo de archivo no válido. Use 'pdf', 'markdown' o 'docx'",
+                        "codigo_error": "INVALID_FILE_TYPE"
+                    },
+                    'status': 400
+                }
 
-def process_download(file_type, codigo_fuente, extra, language):
-    docs = documentador_ia()
-    
-    start_time = time.time()
-    """
-    Process download for documentation in different formats.
-    
-    Args:
-        file_type: File type ('pdf', 'markdown', 'docx')
-        codigo_fuente: Source code string
-        extra: Additional requirements
-        language: Language preference ('en', 'es', or None)
-    """
-    try:
-        # Validar tipo de archivo
-        if file_type not in ['pdf', 'markdown', 'docx']:
+            # Validar el código
+            from ..utils import validate
+            is_valid, error_response = validate.validar_codigo(
+                codigo_fuente, 
+                logger, 
+                self.min_code_length, 
+                self.max_code_length
+            )
+            
+            if not is_valid:
+                return {
+                    'type': 'json',
+                    'data': error_response,
+                    'status': 400
+                }
+
+            # Cache: generar hash y buscar en Redis
+            extra_str = (extra or "").strip().lower()
+            cache_key = self.cache.generate_hash(
+                content=codigo_fuente,
+                doc_type=file_type,
+                extra_requirements=extra_str
+            )
+            
+            cached_result = self.cache.get(cache_key)
+            
+            logger.info(f"Key de cache: {cache_key[:16]}...")
+            
+            if cached_result:
+                logger.info(f"Cache HIT para código: {len(codigo_fuente)} caracteres")
+                resultado_markdown = cached_result.get("documentation", "")
+                from_cache = True
+            else:
+                logger.info(f"Cache MISS, generando con IA...")
+                # Generar documentación con IA
+                logger.info(f"Generando documentación {file_type} para el código recibido")
+                resultado_markdown = self.doc.generar(codigo_fuente, tipo="markdown", extra=extra_str, lang=language)
+                
+                self.cache.set(cache_key, {
+                    "documentation": resultado_markdown,
+                    "file_type": file_type
+                })
+                from_cache = False
+
+            elapsed_time = time.time() - start_time
+            cache_stats = self.cache.get_stats()
+
+            # Generar archivo según el tipo solicitado
+            if file_type == 'markdown':
+                return self._generar_markdown(resultado_markdown, cache_stats, elapsed_time, from_cache)
+            elif file_type == 'pdf':
+                return self._generar_pdf(resultado_markdown, cache_stats, elapsed_time, from_cache)
+            elif file_type == 'docx':
+                return self._generar_docx(resultado_markdown, cache_stats, elapsed_time, from_cache)
+
+        except Exception as e:
+            logger.error(f"Error inesperado: {str(e)}", exc_info=True)
             return {
                 'type': 'json',
                 'data': {
-                    "error": "Tipo de archivo no valido. Use 'pdf' , 'markdown' o 'docx",
-                    "codigo_error": "INVALID_FILE_TYPE"
+                    "error": f"Error interno del servidor al generar documentación {file_type}",
+                    "codigo_error": "INTERNAL_SERVER_ERROR"
                 },
-                'status': 400
+                'status': 500
             }
 
-        # Validar el código
-        from ..utils import validate
-        is_valid, error_response = validate.validar_codigo(
-            codigo_fuente, 
-            logger, 
-            MIN_CODE_LENGTH, 
-            MAX_CODE_LENGTH
-        )
+    def _generar_markdown(self, contenido, cache_stats=None, elapsed_time=0.0, from_cache=False):
+        """Genera y retorna un archivo Markdown."""
+        logger.info(f"Documentación Markdown generada exitosamente (cache: {from_cache}, tiempo: {elapsed_time:.2f}s)")
+        logger.info(f"Estadísticas de cache: {cache_stats}")
         
-        if not is_valid:
-            return {
-                'type': 'json',
-                'data': error_response,
-                'status': 400
-            }
-
-        # Cache: generar hash y buscar en Redis
-        extra_str = (extra or "").strip().lower()
-        cache_key = cache.generate_hash(
-            content=codigo_fuente,
-            doc_type=file_type,
-            extra_requirements=extra_str
-        )
+        if isinstance(contenido, str):
+            contenido = contenido.encode('utf-8')
         
-        cached_result = cache.get(cache_key)
-        
-        logger.info(f"Cache key: {cache_key[:16]}...")
-        
-        if cached_result:
-            logger.info(f"Cache HIT para código: {len(codigo_fuente)} chars")
-            resultado_markdown = cached_result.get("documentation", "")
-            from_cache = True
-        else:
-            logger.info(f"Cache MISS, generando con IA...")
-            # Generar documentación con IA
-            logger.info(f"Generando documentación {file_type} para el código recibido")
-            resultado_markdown = docs.generar(codigo_fuente, tipo="markdown", extra=extra_str, lang=language)
-            
-            cache.set(cache_key, {
-                "documentation": resultado_markdown,
-                "file_type": file_type
-            })
-            from_cache = False
-
-        elapsed_time = time.time() - start_time
-        cache_stats = cache.get_stats()
-
-        # Generar archivo según el tipo solicitado
-        if file_type == 'markdown':
-            return _generar_markdown(resultado_markdown, cache_stats, elapsed_time, from_cache)
-        elif file_type == 'pdf':
-            return _generar_pdf(resultado_markdown, cache_stats, elapsed_time, from_cache)
-        elif file_type == 'docx':
-            return _generar_docx(resultado_markdown, cache_stats, elapsed_time, from_cache)
-
-    except Exception as e:
-        logger.error(f"Error inesperado: {str(e)}", exc_info=True)
         return {
-            'type': 'json',
-            'data': {
-                "error": f"Error interno del servidor al generar documentación {file_type}",
-                "codigo_error": "INTERNAL_SERVER_ERROR"
-            },
-            'status': 500
+            'type': 'file',
+            'content': contenido,
+            'mimetype': 'text/markdown',
+            'filename': f'documentacion_{datetime.now().strftime("%Y-%m-%d_%H-%M")}.md'
         }
 
-def _generar_markdown(contenido, cache_stats=None, elapsed_time=0.0, from_cache=False):
-    """Genera y retorna un archivo Markdown."""
-    logger.info(f"Documentación Markdown generada exitosamente (cache: {from_cache}, time: {elapsed_time:.2f}s)")
-    logger.info(f"Cache stats: {cache_stats}")
-    from ..utils import bytes_utils
-    content_bytes = bytes_utils.preparar_descarga(contenido)
-    
-    return {
-        'type': 'file',
-        'content': content_bytes,
-        'mimetype': 'text/markdown',
-        'filename': f'documentacion_{datetime.now().strftime("%Y-%m-%d_%H-%M")}.md'
-    }
+    def _generar_pdf(self, contenido, cache_stats=None, elapsed_time=0.0, from_cache=False):
+        """Genera y retorna un archivo PDF."""
+        logger.info(f"PDF generado exitosamente (cache: {from_cache}, tiempo: {elapsed_time:.2f}s)")
+        logger.info(f"Estadísticas de cache: {cache_stats}")
+        
+        # Crear el PDF
+        pdf = EasyDocsPDF()
+        pdf.construir_desde_markdown(contenido)
+        
+        # Preparar descarga en memoria
+        pdf_bytes = pdf.output(dest='S')
+        
+        return {
+            'type': 'file',
+            'content': pdf_bytes,
+            'mimetype': 'application/pdf',
+            'filename': f'documentacion_{datetime.now().strftime("%Y%m%d_%H%M")}.pdf'
+        }
 
-def _generar_pdf(contenido, cache_stats=None, elapsed_time=0.0, from_cache=False):
-    """Genera y retorna un archivo PDF."""
-    logger.info(f"PDF generado exitosamente (cache: {from_cache}, time: {elapsed_time:.2f}s)")
-    logger.info(f"Cache stats: {cache_stats}")
-    
-    # Crear el PDF
-    pdf = EasyDocsPDF()
-    pdf.construir_desde_markdown(contenido)
-    
-    # Preparar descarga en memoria
-    pdf_bytes = pdf.output(dest='S')
-    from ..utils import bytes_utils
-    content_bytes = bytes_utils.preparar_descarga(pdf_bytes)
-    
-    return {
-        'type': 'file',
-        'content': content_bytes,
-        'mimetype': 'application/pdf',
-        'filename': f'documentacion_{datetime.now().strftime("%Y%m%d_%H%M")}.pdf'
-    }
-    
+    def _generar_docx(self, contenido, cache_stats=None, elapsed_time=0.0, from_cache=False):
+        """Genera y retorna un archivo DOCX."""
+        logger.info(f"DOCX generado exitosamente (cache: {from_cache}, tiempo: {elapsed_time:.2f}s)")
+        logger.info(f"Estadísticas de cache: {cache_stats}")
+        
+        # Crear el DOCX
+        docx = EasyDocsDOCX()
+        docx.agregar_encabezado()
+        docx.construir_desde_markdown(contenido)
+        
+        # Preparar descarga en memoria
+        output_stream = io.BytesIO()
+        docx.guardar(output_stream)
+        content_bytes = output_stream.getvalue()
+        
+        return {
+            'type': 'file',
+            'content': content_bytes,
+            'mimetype': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'filename': f'doc_{datetime.now().strftime("%Y%m%d_%H%M")}.docx'
+        }
 
-def _generar_docx(contenido, cache_stats=None, elapsed_time=0.0, from_cache=False):
-    """Genera y retorna un archivo DOCX."""
-    logger.info(f"DOCX generado exitosamente (cache: {from_cache}, time: {elapsed_time:.2f}s)")
-    logger.info(f"Cache stats: {cache_stats}")
-    
-    # Crear el DOCX
-    docx = EasyDocsDOCX()
-    docx.agregar_encabezado()
-    docx.construir_desde_markdown(contenido)
-    
-    # Preparar descarga en memoria
-    output_stream = io.BytesIO()
-    docx.guardar(output_stream)
-    content_bytes = output_stream.getvalue()
-    
-    return {
-        'type': 'file',
-        'content': content_bytes,
-        'mimetype': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        'filename': f'doc_{datetime.now().strftime("%Y%m%d_%H%M")}.docx'
-    }
+
+
+
