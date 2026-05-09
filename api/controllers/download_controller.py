@@ -28,34 +28,34 @@ class DownloadController:
     def get_download_info(self):
         """Endpoint de información para la descarga de documentación"""
         return {
-            "mensaje": "Endpoint de descarga de documentación",
+            "mensaje": "Documentation download endpoint",
             "formatos_disponibles": ["pdf", "markdown", "docx"],
             "uso": {
                 "pdf": {
                     "metodo": "POST",
                     "ruta": "/api/download/pdf",
-                    "descripcion": "Genera un PDF con la documentación del código proporcionado",
+                    "descripcion": "Generates a PDF with the documentation of the provided code",
                     "cuerpo": {
-                        "codigo": "Código fuente a documentar (requerido)",
-                        "extra": "Requisitos adicionales (opcional)"
+                        "codigo": "Source code to document (required)",
+                        "extra": "Additional requirements (optional)"
                     }
                 },
                 "markdown": {
                     "metodo": "POST",
                     "ruta": "/api/download/markdown",
-                    "descripcion": "Genera un archivo Markdown con la documentación del código proporcionado",
+                    "descripcion": "Generates a Markdown file with the documentation of the provided code",
                     "cuerpo": {
-                        "codigo": "Código fuente a documentar (requerido)",
-                        "extra": "Requisitos adicionales (opcional)"
+                        "codigo": "Source code to document (required)",
+                        "extra": "Additional requirements (optional)"
                     }
                 },
                 "docx": {
                     "metodo": "POST",
                     "ruta": "/api/download/docx",
-                    "descripcion": "Genera un archivo Word (.docx) con la documentación del código proporcionado",
+                    "descripcion": "Generates a Word file (.docx) with the documentation of the provided code",
                     "cuerpo": {
-                        "codigo": "Código fuente a documentar (requerido)",
-                        "extra": "Requisitos adicionales (opcional)"
+                        "codigo": "Source code to document (required)",
+                        "extra": "Additional requirements (optional)"
                     }
                 }
             },
