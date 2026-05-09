@@ -28,38 +28,38 @@ class DownloadController:
     def get_download_info(self):
         """Endpoint de información para la descarga de documentación"""
         return {
-            "mensaje": "Documentation download endpoint",
-            "formatos_disponibles": ["pdf", "markdown", "docx"],
-            "uso": {
+            "message": "Documentation download endpoint",
+            "formats": ["pdf", "markdown", "docx"],
+            "usage": {
                 "pdf": {
-                    "metodo": "POST",
-                    "ruta": "/api/download/pdf",
-                    "descripcion": "Generates a PDF with the documentation of the provided code",
-                    "cuerpo": {
+                    "method": "POST",
+                    "path": "/api/download/pdf",
+                    "description": "Generates a PDF with the documentation of the provided code",
+                    "body": {
                         "codigo": "Source code to document (required)",
                         "extra": "Additional requirements (optional)"
                     }
                 },
                 "markdown": {
-                    "metodo": "POST",
-                    "ruta": "/api/download/markdown",
-                    "descripcion": "Generates a Markdown file with the documentation of the provided code",
-                    "cuerpo": {
+                    "method": "POST",
+                    "path": "/api/download/markdown",
+                    "description": "Generates a Markdown file with the documentation of the provided code",
+                    "body": {
                         "codigo": "Source code to document (required)",
                         "extra": "Additional requirements (optional)"
                     }
                 },
                 "docx": {
-                    "metodo": "POST",
-                    "ruta": "/api/download/docx",
-                    "descripcion": "Generates a Word file (.docx) with the documentation of the provided code",
-                    "cuerpo": {
+                    "method": "POST",
+                    "path": "/api/download/docx",
+                    "description": "Generates a Word file (.docx) with the documentation of the provided code",
+                    "body": {
                         "codigo": "Source code to document (required)",
                         "extra": "Additional requirements (optional)"
                     }
                 }
             },
-            "limites": {
+            "limits": {
                 "max_code_length": self.max_code_length,
                 "min_code_length": self.min_code_length
             }
