@@ -5,6 +5,14 @@ Todos los cambios notables en EasyDocs se documenta en este archivo.
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 y este proyecto sigue [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.2] - 2026/05/9
+
+### fixed
+- remueve variable certificado ssl none para evitar ataques *man in the middle attack*
+
+## changed
+- mueve logica de negocio de *routes* a *controllers*
+
 ## [2.3.1] - 2026/05/1
 
 ### 🐛 fixed
