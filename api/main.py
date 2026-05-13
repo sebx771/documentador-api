@@ -11,7 +11,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-API_VERSION = "2.3.1"
+API_VERSION = "2.3.2"
 app = Flask(__name__)
 CORS(app)
 app.json.sort_keys = False # esto hace que el JSON tenga el mismo orden que las claves de diccionarios
