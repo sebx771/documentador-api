@@ -6,7 +6,13 @@ from .prompts import get_prompts, DANGEROUS_WORDS
 from .models import models
 from ..rate_limiter import Ratelimiter
 
+logs=logging.FileHandler("scan.log",mode="a",encoding="utf-8")
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logs.setFormatter(formatter)
+
+
 logger = logging.getLogger(__name__)
+logger.addHandler(logs)
 
 
 class DocumentadorIA:
@@ -94,12 +100,12 @@ class DocumentadorIA:
 
     def generar(
         self,
-        codigo_fuente,
-        tipo,
-        extra=None,
-        is_chunk=False,
-        lang=None,
-        model_role=None,
+        codigo_fuente:str,
+        tipo:str,
+        extra:str=None,
+        is_chunk:bool=False,
+        lang:str=None,
+        model_role:str=None,
     ):
         """
         Punto de entrada con Routing y Fallback.
@@ -115,7 +121,7 @@ class DocumentadorIA:
         retry_queue = [
             models["final_doc"]["id"] if not is_chunk else models["chunking"]["id"],
             models["fallback"]["id"],
-            models["emergency"]["id"],
+            models["emergency"]["id"]
         ]
         # Eliminar duplicados manteniendo el orden
         retry_queue = list(dict.fromkeys(retry_queue))
@@ -218,7 +224,7 @@ class DocumentadorIA:
         lang: str,
         is_chunk: bool = False,
         is_consolidation: bool = False,
-    ):
+    )-> str:
         prompts = get_prompts(lang)
         config = prompts["configs"].get(tipo, prompts["configs"]["markdown"])
 
@@ -256,7 +262,7 @@ Reglas obligatorias:
             )
         return system_prompt
 
-    def _build_user_prompt(self, codigo_fuente, extra, lang, is_chunk=False):
+    def _build_user_prompt(self, codigo_fuente:str, extra:str, lang:str, is_chunk:bool=False)-> str:
         prompts = get_prompts(lang)
         if lang == "en":
             instr = f"Generate the technical documentation for the following code:\n\n```\n{codigo_fuente}\n```"

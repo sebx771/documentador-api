@@ -7,7 +7,7 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 
-def get_groq_client():
+def get_groq_client()->Groq:
     """
     Inicializa y retorna el cliente de Groq.
     """
