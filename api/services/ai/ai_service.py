@@ -6,13 +6,11 @@ from .prompts import get_prompts, DANGEROUS_WORDS
 from .models import models
 from ..rate_limiter import Ratelimiter
 
-logs=logging.FileHandler("scan.log",mode="a",encoding="utf-8")
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-logs.setFormatter(formatter)
+
 
 
 logger = logging.getLogger(__name__)
-logger.addHandler(logs)
+
 
 
 class DocumentadorIA:
