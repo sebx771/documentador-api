@@ -6,7 +6,7 @@ class EasyDocsPDF:
     Clase modernizada para convertir Markdown en PDF usando markdown-pdf.
     Soporta tablas, bloques de código y diseño responsivo basado en CSS.
     """
-    
+
     def __init__(self):
         self.pdf = MarkdownPdf(toc_level=2)
         # Diseño moderno con CSS
@@ -82,21 +82,23 @@ class EasyDocsPDF:
         Convierte el Markdown en una sección del PDF con estilos modernos.
         """
         # Añadimos un encabezado visual al HTML
-        header_html = '<div class="header">Reporte de Documentación Técnica - easyDocs</div>'
-        
+        header_html = (
+            '<div class="header">Reporte de Documentación Técnica - easyDocs</div>'
+        )
+
         # Combinamos el encabezado con el contenido (el contenido será parseado de MD a HTML por la librería)
         # Nota: La librería markdown-pdf procesa el texto de la Sección como Markdown.
         # Para incluir HTML puro, podemos usar etiquetas HTML dentro del MD si el parser lo permite
         # o simplemente confiar en que el parser maneja bien el contenido.
-        
+
         contenido_completo = f"{header_html}\n\n{texto_md}"
         self.pdf.add_section(Section(contenido_completo), user_css=self.css)
 
-    def output(self, dest='S'):
+    def output(self, dest="S"):
         """
-        Retorna el contenido del PDF. 
+        Retorna el contenido del PDF.
         Para mantener compatibilidad con la firma anterior, aceptamos 'dest'.
         """
         buffer = io.BytesIO()
         self.pdf.save(buffer)
-        return buffer.getvalue()
+        return buffer.getvalue()
