@@ -28,38 +28,30 @@ class DocumentationOrchestrator:
         max_files: int = None,
         chunking_service: ChunkingService = None,
         cache_service: CacheService = None,
-        documentador: DocumentadorIA = None
+        documentador: DocumentadorIA = None,
     ):
         self.max_input_size = max_input_size or self.DEFAULT_MAX_INPUT_SIZE
         self.max_files = max_files or self.DEFAULT_MAX_FILES
-        
+
         self.chunking_service = chunking_service or ChunkingService()
         self.cache_service = cache_service or CacheService()
         self.documentador = documentador or DocumentadorIA()
+
     def process_zip(
         self,
         zip_content: bytes,
         doc_type: str = "markdown",
         extra_requirements: str = None,
         zip_service=None,
-        language: str = None
+        language: str = None,
     ) -> Dict[str, Any]:
         """
         Procesa un ZIP y genera documentación consolidada.
-        
-        Args:
-            zip_content: Bytes del archivo ZIP
-            doc_type: Tipo de documento (markdown, pdf, word)
-            extra_requirements: Requisitos adicionales
-            zip_service: Instancia de ZipService (inyectada para testing)
-        
-        Returns:
-            Dict con documentación, metadata y errores
         """
         start_time = time.time()
-        
+
         logger.info(f"Iniciando procesamiento de ZIP ({len(zip_content)} bytes)")
-        
+
         input_size = len(zip_content)
         if input_size > self.max_input_size:
             raise ValueError(
@@ -68,41 +60,46 @@ class DocumentationOrchestrator:
             )
 
         files, invalid_files = self._extract_files(zip_content, zip_service)
-        
+
         if not files:
             raise ValueError("No se encontraron archivos válidos para documentar")
 
-        logger.info(f"Archivos extraídos: {len(files)} válidos, {len(invalid_files)} inválidos")
+        logger.info(
+            f"Archivos extraídos: {len(files)} válidos, {len(invalid_files)} inválidos"
+        )
 
         chunks = self.chunking_service.create_chunks(
-            files=files,
-            doc_type=doc_type,
-            extra_requirements=extra_requirements
+            files=files, doc_type=doc_type, extra_requirements=extra_requirements
         )
-        
+
         logger.info(f"Chunks creados: {len(chunks)}")
 
-        # DETECCIÓN DE IDIOMA ÚNICA
         if language:
             detected_lang = language
             logger.info(f"Idioma forzado vía parámetros: {detected_lang}")
         else:
-            # Usamos el primer chunk como muestra representativa para fijar el idioma del proyecto
             sample_code = chunks[0]["content"] if chunks else ""
-            detected_lang = self.documentador.detect_language(sample_code, extra_requirements)
-            logger.info(f"Coherencia de idioma establecida (Smart Detection): {detected_lang}")
+            detected_lang = self.documentador.detect_language(
+                sample_code, extra_requirements
+            )
+            logger.info(
+                f"Coherencia de idioma establecida (Smart Detection): {detected_lang}"
+            )
 
-        chunk_results = self._process_chunks(chunks, doc_type, extra_requirements, language=detected_lang)
+        chunk_results = self._process_chunks(
+            chunks, doc_type, extra_requirements, language=detected_lang
+        )
 
-        final_documentation = self._consolidate_documentation(chunk_results, extra_requirements, language=detected_lang)
+        final_documentation = self._consolidate_documentation(
+            chunk_results, extra_requirements, language=detected_lang
+        )
 
         elapsed_time = time.time() - start_time
         cache_stats = self.cache_service.get_stats()
 
         logger.info(
             f"Procesamiento completado: {len(files)} archivos, "
-            f"{len(chunks)} chunks, tiempo: {elapsed_time:.2f}s, "
-            f"cache hit rate: {cache_stats.get('hit_rate_percent', 0)}%"
+            f"{len(chunks)} chunks, tiempo: {elapsed_time:.2f}s"
         )
 
         return {
@@ -115,62 +112,46 @@ class DocumentationOrchestrator:
                 "cache_stats": cache_stats,
                 "elapsed_time_seconds": round(elapsed_time, 2),
                 "input_size_bytes": input_size,
-                "doc_type": doc_type
-            }
+                "doc_type": doc_type,
+            },
         }
 
-    def _extract_files(
-        self,
-        zip_content: bytes,
-        zip_service
-    ) -> tuple:
-        """Extrae archivos del ZIP usando el servicio existente."""
+    def _extract_files(self, zip_content: bytes, zip_service) -> tuple:
         from .zip_services import ZipService
-        
+
         service = zip_service or ZipService()
-        
         raw_content, invalid_files = service.extraer_zip(zip_content)
-        
         if not raw_content:
             return [], invalid_files
-        
         files = self._parse_extracted_content(raw_content)
-        
         return files, invalid_files
 
     def _parse_extracted_content(self, raw_content: str) -> List[Dict[str, str]]:
-        """Convierte el contenido extraído en lista de diccionarios."""
         files = []
-        
         sections = raw_content.split("### Archivo:")
-        
         for section in sections:
             if not section.strip():
                 continue
-            
             try:
                 lines = section.split("\n", 1)
                 if len(lines) < 2:
                     continue
-                
                 header = lines[0].strip()
                 content = lines[1] if len(lines) > 1 else ""
-                
                 parts = header.split("Lenguaje:")
                 filename = parts[0].strip()
                 language = parts[1].strip() if len(parts) > 1 else "unknown"
-                
                 if content.strip():
-                    files.append({
-                        "filename": filename,
-                        "language": language,
-                        "content": content.strip()
-                    })
-                    
+                    files.append(
+                        {
+                            "filename": filename,
+                            "language": language,
+                            "content": content.strip(),
+                        }
+                    )
             except Exception as e:
                 logger.warning(f"Error parseando sección: {str(e)}")
                 continue
-        
         return files
 
     def _process_chunks(
@@ -178,111 +159,87 @@ class DocumentationOrchestrator:
         chunks: List[Dict],
         doc_type: str,
         extra_requirements: str,
-        language: str = "es"
+        language: str = "es",
     ) -> List[Dict]:
-        """Procesa cada chunk, usando cache cuando es posible."""
         results = []
-        
         for idx, chunk in enumerate(chunks):
-            logger.info(f"Procesando chunk {idx + 1}/{len(chunks)} ({chunk.get('file_count', 0)} archivos)")
-            
+            logger.info(f"Procesando chunk {idx + 1}/{len(chunks)}")
             cache_key = self.cache_service.generate_hash(
                 content=chunk["content"],
                 doc_type=doc_type,
-                extra_requirements=extra_requirements
+                extra_requirements=extra_requirements,
             )
-            
             cached_result = self.cache_service.get(cache_key)
-            
             if cached_result:
-                logger.info(f"Chunk {idx + 1}: usando resultado cacheado")
                 results.append(cached_result)
                 continue
-            
             try:
-                # El servicio de IA ahora maneja internamente:
-                # 1. Estimación de tokens
-                # 2. Rate limiting (pasando tokens_needed)
-                # 3. Reintentos y Fallback de modelos
                 doc_result = self.documentador.generar(
                     codigo_fuente=chunk["content"],
                     tipo=doc_type,
                     extra=extra_requirements,
                     is_chunk=True,
-                    lang=language
+                    lang=language,
                 )
-
                 result = {
                     "chunk_index": idx,
                     "files": chunk.get("files", []),
                     "documentation": doc_result,
-                    "cached": False
+                    "cached": False,
                 }
-                
                 self.cache_service.set(cache_key, result)
                 results.append(result)
-                
-                logger.info(f"Chunk {idx + 1}: documentación generada ({len(doc_result)} caracteres)")
-                
             except Exception as e:
                 logger.error(f"Error procesando chunk {idx + 1}: {str(e)}")
-                results.append({
-                    "chunk_index": idx,
-                    "files": chunk.get("files", []),
-                    "documentation": f"Error al generar documentación: {str(e)}",
-                    "error": True,
-                    "cached": False
-                })
-        
+                results.append(
+                    {
+                        "chunk_index": idx,
+                        "documentation": f"Error: {str(e)}",
+                        "error": True,
+                    }
+                )
         return results
 
-    def _consolidate_documentation(self, chunk_results: List[Dict], extra_requirements: str, language: str = "es") -> str:
-        """Consolida la documentación de múltiples chunks (versión mejorada)."""
-
+    def _consolidate_documentation(
+        self, chunk_results: List[Dict], extra_requirements: str, language: str = "es"
+    ) -> str:
+        """Consolida la documentación de múltiples chunks usando IA para el acabado final."""
         if not chunk_results:
             return "No se pudo generar documentación."
-        
+
         if len(chunk_results) == 1:
-            return chunk_results[0].get("documentation", "")
+            doc_unido = chunk_results[0].get("documentation", "")
+        else:
+            import re
+            from collections import defaultdict
 
-        import re
-        from collections import defaultdict
+            sections = defaultdict(list)
 
-        sections = defaultdict(list)
+            for result in chunk_results:
+                doc = result.get("documentation", "")
+                parts = re.split(r"(#+ .+)", doc)
+                current_header = None
+                for part in parts:
+                    if part.strip().startswith("#"):
+                        current_header = part.strip()
+                    else:
+                        if current_header and part.strip():
+                            sections[current_header].append(part.strip())
 
-        #  1. Separar por headers
-        for result in chunk_results:
-            doc = result.get("documentation", "")
-            parts = re.split(r"(#+ .+)", doc)
+            merged_sections = {}
+            for header, contents in sections.items():
+                seen = set()
+                unique = []
+                for c in contents:
+                    norm = c.strip().lower()
+                    if norm not in seen:
+                        seen.add(norm)
+                        unique.append(c)
+                merged_sections[header] = "\n\n".join(unique)
 
-            current_header = None
-            for part in parts:
-                if part.strip().startswith("#"):
-                    current_header = part.strip()
-                else:
-                    if current_header and part.strip():
-                        sections[current_header].append(part.strip())
-
-        #  2. Deduplicar contenido
-        merged_sections = {}
-        for header, contents in sections.items():
-            seen = set()
-            unique = []
-
-            for c in contents:
-                norm = c.strip().lower()
-                if norm not in seen:
-                    seen.add(norm)
-                    unique.append(c)
-
-            merged_sections[header] = "\n\n".join(unique)
-
-        #  3. Reconstruir doc limpio
-        titulo_principal = "# Documentación del Proyecto\n\n" if language == "es" else "# Project Documentation\n\n"
-        doc_unido = titulo_principal
-
-        for header, content in merged_sections.items():
-            doc_unido += f"{header}\n{content}\n\n"
+            doc_unido = ""
+            for header, content in merged_sections.items():
+                doc_unido += f"{header}\n{content}\n\n"
 
         #  4. Aplicar extra SOLO al final, manteniendo el idioma correcto
         final_doc = self.documentador.apply_extra(doc_unido, extra_requirements, lang=language)
