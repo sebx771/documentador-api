@@ -165,6 +165,8 @@ class DocumentadorIA:
                     f"Llamando a {current_model} (Rol: {model_role}, Lang: {lang})"
                 )
 
+                max_output_tokens = 4096 if (not is_chunk or model_role == "final_doc") else 2048
+
                 chat_completion = self.client.chat.completions.create(
                     messages=[
                         {"role": "system", "content": system_message},
@@ -172,6 +174,7 @@ class DocumentadorIA:
                     ],
                     model=current_model,
                     temperature=0.1 if not is_chunk else 0.2,
+                    max_tokens=max_output_tokens,
                 )
 
                 respuesta = chat_completion.choices[0].message.content

@@ -28,7 +28,7 @@ def test_zip_processing():
     orch = DocumentationOrchestrator(
         max_input_size=10*1024*1024,
         max_files=50,
-        chunking_service=ChunkingService(max_chunk_size=8000, max_files_per_chunk=10),
+        chunking_service=ChunkingService(max_chunk_tokens=8000, max_files_per_chunk=10),
         cache_service=CacheService(max_size=100)
     )
     
