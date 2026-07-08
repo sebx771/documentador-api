@@ -138,70 +138,91 @@ class DocumentadorIA:
 
         last_error = None
         for current_model in retry_queue:
-            try:
-                # 2. Gestión de Rate Limit (TPM)
-                limiter = self.limiters.get(current_model, {}).get("ratelimiter")
-                model_tpm = self.limiters.get(current_model, {}).get("tpm")
+            # Reintentar el mismo modelo tras backoff si el rate limiter bloquea
+            model_retries = 3
+            for attempt in range(model_retries):
+                try:
+                    limiter = self.limiters.get(current_model, {}).get("ratelimiter")
+                    model_tpm = self.limiters.get(current_model, {}).get("tpm")
 
-                # Si la petición por sí sola supera el TPM del modelo, ni intentamos
-                if model_tpm and tokens_needed > model_tpm:
-                    logger.warning(
-                        f"Petición ({tokens_needed} tk) supera el TPM de {current_model} ({model_tpm} tk/min). "
-                        f"Saltando directamente al siguiente modelo."
-                    )
-                    continue
-
-                if limiter:
-                    logger.info(
-                        f"Solicitando {tokens_needed} tokens para modelo {current_model}..."
-                    )
-                    if not limiter.allow_request(tokens_needed):
+                    if model_tpm and tokens_needed > model_tpm:
                         logger.warning(
-                            f"Rate limit local excedido para {current_model}. Saltando al siguiente modelo."
+                            f"Petición ({tokens_needed} tk) supera el TPM de {current_model} ({model_tpm} tk/min). "
+                            f"Saltando al siguiente modelo."
                         )
-                        continue
+                        last_error = Exception(
+                            f"Petición ({tokens_needed} tk) excede el TPM ({model_tpm} tk) de {current_model}"
+                        )
+                        break
 
-                logger.info(
-                    f"Llamando a {current_model} (Rol: {model_role}, Lang: {lang})"
-                )
+                    if limiter and not limiter.allow_request(tokens_needed):
+                        if attempt < model_retries - 1:
+                            wait = 1 * (2 ** attempt)
+                            logger.warning(
+                                f"Rate limit local excedido para {current_model}. "
+                                f"Reintento {attempt + 1}/{model_retries} en {wait}s..."
+                            )
+                            time.sleep(wait)
+                            continue
+                        else:
+                            logger.warning(
+                                f"Rate limit local excedido para {current_model} "
+                                f"tras {model_retries} intentos. Saltando al siguiente modelo."
+                            )
+                            last_error = Exception(
+                                f"Rate limit excedido para {current_model} tras {model_retries} intentos"
+                            )
+                            break
 
-                max_output_tokens = 4096 if (not is_chunk or model_role == "final_doc") else 2048
-
-                chat_completion = self.client.chat.completions.create(
-                    messages=[
-                        {"role": "system", "content": system_message},
-                        {"role": "user", "content": user_message},
-                    ],
-                    model=current_model,
-                    temperature=0.1 if not is_chunk else 0.2,
-                    max_tokens=max_output_tokens,
-                )
-
-                respuesta = chat_completion.choices[0].message.content
-                if not respuesta:
-                    raise Exception("Respuesta vacía de la API")
-
-                # 3. Limpieza de tags de razonamiento (ej. Qwen) + instrucciones de chunk
-                respuesta_limpia = self._clean_think_tags(respuesta)
-                respuesta_limpia = self._clean_chunk_instructions(respuesta_limpia)
-                return respuesta_limpia
-
-            except Exception as e:
-                last_error = e
-                error_str = str(e).lower()
-                if (
-                    "429" in error_str
-                    or "rate limit" in error_str
-                    or "too many requests" in error_str
-                ):
-                    logger.warning(
-                        f"MODEL FAILOVER: {current_model} reportó 429. Reintentando con el siguiente..."
+                    logger.info(
+                        f"Llamando a {current_model} (Rol: {model_role}, Lang: {lang})"
                     )
-                    time.sleep(2)  # Pequeña espera antes de saltar
-                    continue
-                else:
-                    logger.error(f"Error crítico en {current_model}: {e}")
-                    raise e
+
+                    max_output_tokens = 4096 if (not is_chunk or model_role == "final_doc") else 2048
+
+                    chat_completion = self.client.chat.completions.create(
+                        messages=[
+                            {"role": "system", "content": system_message},
+                            {"role": "user", "content": user_message},
+                        ],
+                        model=current_model,
+                        temperature=0.1 if not is_chunk else 0.2,
+                        max_tokens=max_output_tokens,
+                    )
+
+                    respuesta = chat_completion.choices[0].message.content
+                    if not respuesta:
+                        raise Exception("Respuesta vacía de la API")
+
+                    respuesta_limpia = self._clean_think_tags(respuesta)
+                    respuesta_limpia = self._clean_chunk_instructions(respuesta_limpia)
+                    return respuesta_limpia
+
+                except Exception as e:
+                    last_error = e
+                    error_str = str(e).lower()
+                    if (
+                        "429" in error_str
+                        or "rate limit" in error_str
+                        or "too many requests" in error_str
+                    ):
+                        if attempt < model_retries - 1:
+                            wait = 1 * (2 ** attempt)
+                            logger.warning(
+                                f"429 en {current_model}. Reintento {attempt + 1}/{model_retries} en {wait}s..."
+                            )
+                            time.sleep(wait)
+                            continue
+                        else:
+                            logger.warning(
+                                f"MODEL FAILOVER: {current_model} reportó 429 tras {model_retries} intentos. "
+                                f"Saltando al siguiente modelo."
+                            )
+                            time.sleep(2)
+                            break
+                    else:
+                        logger.error(f"Error crítico en {current_model}: {e}")
+                        raise e
 
         raise Exception(
             f"Todos los modelos de la cola fallaron. Último error: {last_error}"
