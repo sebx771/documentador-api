@@ -323,6 +323,18 @@ Reglas obligatorias:
         logger.info("Aplicando requisitos extra a la documentación")
         if not extra or not extra.strip():
             return docs
+
+        # Estimar tokens y validar que cabe en el modelo final_doc
+        estimated_tokens = len(docs) // 3
+        final_tpm = models.get("final_doc", {}).get("tpm", 8000)
+        if estimated_tokens > final_tpm:
+            logger.warning(
+                f"Documento consolidado muy grande ({estimated_tokens} tk estimados) "
+                f"para final_doc ({final_tpm} TPM). Omitiendo apply_extra "
+                f"para evitar error masivo. El extra se perderá."
+            )
+            return docs
+
         return self.generar(
             docs,
             tipo="markdown",
