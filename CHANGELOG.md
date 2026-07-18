@@ -5,6 +5,21 @@ Todos los cambios notables en EasyDocs se documenta en este archivo.
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 y este proyecto sigue [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+
+
+## [2.4.1] - 2026/07/18
+
+### fixed
+- reemplazo de modelos deprecados del proveedor *groq* 
+ - Llama 4 Scout 17B -> llama-3.1-8b-instant 
+ - qwen 3 32B -> qwen 3 27B
+
+## [2.4.0] - 2026/07/08
+
+## changed 
+- se modifica el chunking para que pueda dividir chunks que sea demasiados grandes
+- se agrega back off a la llamada de los modelos
+
 ## [2.3.2] - 2026/05/9
 
 ### fixed
