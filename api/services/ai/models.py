@@ -3,15 +3,15 @@
 models = {
 
    "chunking": {
-       "id": "meta-llama/llama-4-scout-17b-16e-instruct",
-       "tpm": 30000
+       "id": "meta-llama/llama-3.1-8b-instant",
+       "tpm": 14000
    },
     "final_doc": {
         "id": "openai/gpt-oss-120b",
         "tpm": 8000
     },
     "fallback": {
-        "id": "qwen/qwen3-32b",
+        "id": "qwen/qwen3.6-27b",
         "tpm": 6000
     },
     "emergency": {
