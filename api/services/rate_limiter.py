@@ -50,7 +50,7 @@ class Ratelimiter:
         self.key_prefix = key_prefix
 
         logger.info(
-            f"Ratelimiter [{key_prefix}] -> RPM: {self.refill_rate}/s, TPM: {self.refill_token_rate}/s, Capacidad: {self.max_capacity}"
+            f"Ratelimiter [{key_prefix}] -> RPM: {self.refill_rate:.2f}/s, TPM: {self.refill_token_rate:.2f}/s, Capacidad: {self.max_capacity}"
         )
 
         try:
