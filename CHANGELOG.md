@@ -7,6 +7,19 @@ y este proyecto sigue [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 
 
+## [2.5.0] - 2026/07/20
+
+### ✨ Added
+- **Provider Abstraction Layer** — `BaseAIProvider` (ABC) como contrato para proveedores de IA
+  - `GroqProvider` implementa el contrato encapsulando el SDK de Groq
+  - Estructura tipada `ChatCompletionResponse` para normalizar respuestas
+  - `models.py` ahora incluye campo `provider` por cada modelo
+  - Preparado para nuevos proveedores (OpenRouter, etc.)
+
+### changed
+- `DocumentadorIA` migrado de `self.client` directo a inyección de providers via `_get_provider_for_model`
+- Eliminado `config.py` (`get_groq_client()` reemplazado por `GroqProvider`)
+
 ## [2.4.1] - 2026/07/18
 
 ### fixed
