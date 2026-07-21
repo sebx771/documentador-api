@@ -1,9 +1,9 @@
 import logging
 import time
 import re
-from .config import get_groq_client
 from .prompts import get_prompts, DANGEROUS_WORDS
 from .models import models
+from .provider import GroqProvider
 from ..rate_limiter import Ratelimiter
 
 
@@ -19,10 +19,15 @@ class DocumentadorIA:
     """
 
     def __init__(self):
-        self.client = get_groq_client()
         self.limiters = {}
+        self.providers = {
+            "groq": GroqProvider(),
+        }
+        self._model_to_provider = {
+            config["id"]: config.get("provider", "groq")
+            for config in models.values()
+        }
         self._init_limiters()
-        logger.info("DocumentadorIA v2.3.1 inicializado con Routing y TPM Support")
 
     def _init_limiters(self):
         """Inicializa un limitador de tokens para cada modelo configurado."""
@@ -37,6 +42,10 @@ class DocumentadorIA:
                 ),
                 "tpm": model_tpm,
             }
+
+    def _get_provider_for_model(self, model_id: str):
+        provider_name = self._model_to_provider.get(model_id, "groq")
+        return self.providers[provider_name]
 
     def estimate_tokens(self, system_prompt: str, user_prompt: str) -> int:
         """
@@ -180,7 +189,8 @@ class DocumentadorIA:
 
                     max_output_tokens = 4096 if (not is_chunk or model_role == "final_doc") else 2048
 
-                    chat_completion = self.client.chat.completions.create(
+                    provider = self._get_provider_for_model(current_model)
+                    response = provider.create_chat_completion(
                         messages=[
                             {"role": "system", "content": system_message},
                             {"role": "user", "content": user_message},
@@ -190,7 +200,7 @@ class DocumentadorIA:
                         max_tokens=max_output_tokens,
                     )
 
-                    respuesta = chat_completion.choices[0].message.content
+                    respuesta = response.choices[0].message.content
                     if not respuesta:
                         raise Exception("Respuesta vacía de la API")
 
