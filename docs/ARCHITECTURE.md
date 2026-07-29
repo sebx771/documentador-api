@@ -49,18 +49,20 @@ EasyDocs utiliza una **arquitectura de servicios desacoplada** optimizada para p
         │              │ (Redis - TPM/RPM)    │              │
         └──────────────└──────────────────────┘              │
                                                               │
-                       ┌──────────────┬──────────┐
-                       │              │          │
-                   ┌───▼───┐  ┌───────▼──┐  ┌───▼────┐
-                   │ FPDF  │  │ python-  │  │ Markdown
-                   │Export │  │  docx    │  │Exporter
-                   │(PDF)  │  │(Word)    │  │
-                   └───────┘  └──────────┘  └────────┘
-                                │
-                         ┌──────▼──────┐
-                         │  Response   │
-                         │   (JSON)    │
-                         └─────────────┘
+            ┌───────────────────┬───────────────────┬──────────┐
+            │                   │                   │          │
+        ┌───▼───┐          ┌───▼───────┐      ┌───▼────┐    ┌──▼───────┐
+        │ FPDF  │          │ python-   │      │Markdown │    │ ZipService│
+        │Export │          │  docx     │      │Exporter │    │ .crear_zip│
+        │(PDF)  │          │(Word)     │      │         │    │(Multifile)│
+        └───────┘          └───────────┘      └─────────┘    └──────────┘
+            │                   │                   │             │
+            └───────────────────┼───────────────────┼─────────────┘
+                                │                   │
+                          ┌─────▼───────────────────▼─────┐
+                          │         Response              │
+                          │   (JSON file o .zip bytes)    │
+                          └───────────────────────────────┘
 ```
 
 ---
@@ -85,7 +87,8 @@ EasyDocs utiliza una **arquitectura de servicios desacoplada** optimizada para p
 - Endpoint: `POST /api/upload-zip`
 - Procesa archivos ZIP completos
 - Orquesta el flujo completo de generación
-- Devuelve documentación consolidada + metadata
+- Soporta `doc_type`: markdown, pdf, word, **multifile**
+- Devuelve documentación consolidada (+ metadata) o .zip con N .md
 
 ### 3. **DocumentationOrchestrator** (`api/services/documentation_orchestrator.py`)
 
@@ -102,18 +105,23 @@ Detect Language (DocumentadorIA)
    ↓
 Process Chunks (DocumentadorIA + Cache)
    ↓
-Consolidate Documentation
-   ↓
-Apply Extra Requirements
-   ↓
-JSON Response
+┌─ ¿multifile=True? ─────────────────────┐
+│                                       │
+SÍ                                      NO
+↓                                       ↓
+Skip Consolidation              Consolidate Documentation
+↓                                       ↓
+Collect per-chunk docs          Apply Extra Requirements
+↓                                       ↓
+Return {"files": {...}}         Return {"documentation": "..."}
 ```
 
 **Métodos Clave:**
-- `process_zip()` - Punto de entrada principal
+- `process_zip()` - Punto de entrada principal (acepta `multifile=False`)
 - `_extract_files()` - Extrae contenido del ZIP
 - `_process_chunks()` - Genera documentación por chunk
-- `_consolidate_documentation()` - Merge inteligente de resultados
+- `_consolidate_documentation()` - Merge inteligente de resultados (solo modo no-multifile)
+- `_generate_chunk_filename()` - Asigna nombre significativo a cada .md de chunk
 
 ### 4. **ChunkingService** (`api/services/chunking_service.py`)
 
@@ -180,37 +188,45 @@ Wait or Reject
 
 ### 7. **DocumentadorIA** (`api/services/ai/ai_service.py`)
 
-Motor de generación con **Groq API (Llama 3.1)**:
+Motor de generación con **múltiples proveedores de IA** a través de `BaseAIProvider`:
 
 ```
 1. Detect Language
-   └─→ Analiza el código
+   └─→ Analiza el código (heurística ES/EN)
    
 2. Build Prompts
-   ├─→ System Prompt (instrucciones)
-   └─→ User Prompt (código + requisitos)
+   ├─→ System Prompt (instrucciones + rol)
+   └─→ User Prompt (código + requisitos extra)
    
 3. Estimate Tokens
    └─→ 1 char ≈ 0.25 tokens (heurística)
    
-4. Check Rate Limit
-   └─→ Verifica TPM disponible
+4. Check Rate Limit (Redis Token Bucket)
+   └─→ Verifica TPM disponible por modelo
    
-5. Call Groq API
-   └─→ Llama 3.1 generates documentation
+5. Retry Queue
+   ├─→ Modelo principal (final_doc o chunking)
+   ├─→ Fallback
+   └─→ Emergency
+       └─→ Cada modelo: 3 reintentos con backoff
    
-6. Clean Response
-   └─→ Elimina etiquetas <think>
+6. Call Provider
+   └─→ GroqProvider.create_chat_completion()
    
-7. Return Markdown
+7. Clean Response
+   ├─→ Elimina etiquetas <think>
+   └─→ Elimina instrucciones de chunk repetidas
+   
+8. Return Markdown
 ```
 
 **Soporta:**
-- Lenguajes: Python, JavaScript, Java, C++, Go, Rust, etc.
+- Proveedores: Groq (actual), OpenRouter (futuro)
+- Modelos: ruteo por rol (chunking, final_doc, fallback, emergency)
 - Idiomas: Español, Inglés
-- Formatos: Markdown, PDF, Word
+- Formatos de salida: Markdown, PDF, Word, Multifile .zip
 
-### 8. **Exporters** (`api/export/`)
+### 8. **Exporters** (`api/export/` + `ZipService`)
 
 Convierten Markdown a formatos finales:
 
@@ -219,6 +235,7 @@ Convierten Markdown a formatos finales:
 | FPDF | `fpdf` | Ligero, portátil, rápido |
 | DOCX | `python-docx` | Editable, profesional |
 | Markdown | Nativo | Versionable, legible |
+| Multifile ZIP | `zipfile` | N documentos .md empaquetados |
 
 ---
 
@@ -243,12 +260,12 @@ DocumentadorIA.generar()
 ```
 ⏱️ **Tiempo esperado:** 1-3 segundos
 
-### Flujo 2: Proyecto desde ZIP (Completo)
+### Flujo 2: Proyecto desde ZIP — Consolidado (markdown, pdf, word)
 
 ```
 POST /api/upload-zip
 ├─ file: proyecto.zip
-├─ doc_type: markdown
+├─ doc_type: markdown   # o pdf, word
 └─ language: es
    ↓
    ZipService.extraer_zip()
@@ -257,32 +274,49 @@ POST /api/upload-zip
       ↓
       ChunkingService.create_chunks()
       ├─ Chunk 1: 5 archivos
-      ├─ Chunk 2: 5 archivos
-      ├─ Chunk 3: 8 archivos
-      └─ Chunk 4: 2 archivos
+      └─ Chunk 2: 5 archivos
          ↓
-         Detectar idioma (muestra)
-         ├─ Python → español
-         └─ Guardar coherencia
+         Para cada chunk:
+         ├─ Generar hash → buscar cache
+         ├─ Miss → DocumentadorIA.generar()
+         └─ Guardar en cache
             ↓
-            Para cada chunk:
-            ├─ Generar hash
-            ├─ Buscar cache
-            │  ├─ Hit → retornar cached
-            │  └─ Miss → generar + guardar
-            └─ Consolidar documentación
+            Consolidate Documentation
+            ├─ Merge secciones
+            └─ Apply Extra Requirements
                ↓
                {
-                 "documentation": "# Docs",
-                 "metadata": {
-                   "total_files": 20,
-                   "total_chunks": 4,
-                   "cache_hit_rate": 25%,
-                   "elapsed_time": 15.3s
-                 }
+                 "documentation": "# Docs...",
+                 "metadata": { "total_files": 20, ... }
                }
 ```
-⏱️ **Tiempo esperado:** 10-30 segundos (según tamaño)
+⏱️ **Tiempo esperado:** 10-30 segundos
+
+### Flujo 3: Proyecto desde ZIP — Multifile
+
+```
+POST /api/upload-zip
+├─ file: proyecto.zip
+├─ doc_type: multifile
+└─ language: es
+   ↓
+   (misma extracción y chunking que Flujo 2)
+         ↓
+         Para cada chunk:
+         ├─ DocumentadorIA.generar()
+         └─ (sin consolidación)
+            ↓
+            Generar nombres de archivo:
+            ├─ Chunk 1 → main.py → "main.md"
+            ├─ Chunk 2 → api.py + db.py → "api+db.md"
+            └─ ...
+               ↓
+               ZipService.crear_zip()
+               └─ .zip en memoria con N .md
+                  ↓
+                  send_file(..., mimetype="application/zip")
+```
+⏱️ **Tiempo esperado:** 10-30 segundos (similar, sin paso extra de consolidación)
 
 ---
 
@@ -380,8 +414,10 @@ logger.error(f"Error en IA: {str(e)}")
 
 ### Métricas Retornadas
 
+#### Modo consolidado (markdown/pdf/word)
 ```json
 {
+  "documentation": "# Documentación...",
   "metadata": {
     "total_files": 20,
     "total_chunks": 4,
@@ -390,6 +426,24 @@ logger.error(f"Error en IA: {str(e)}")
       "misses": 3,
       "hit_rate_percent": 25
     },
+    "elapsed_time_seconds": 15.3,
+    "input_size_bytes": 524288
+  }
+}
+```
+
+#### Modo multifile
+```json
+{
+  "files": {
+    "main.md": "# Documentación de main...",
+    "api+db.md": "# Documentación de api y db..."
+  },
+  "metadata": {
+    "total_files": 20,
+    "total_chunks": 4,
+    "total_docs": 4,
+    "cache_stats": { ... },
     "elapsed_time_seconds": 15.3,
     "input_size_bytes": 524288
   }

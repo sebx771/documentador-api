@@ -8,7 +8,7 @@
 
 **EasyDocs** es un asistente de ingeniería de software impulsado por **Inteligencia Artificial** que automatiza la generación de documentación técnica. Transforma código fuente en documentación detallada, profesional y lista para entregar en múltiples formatos.
 
-🚀 **Servicio AI** con Groq API | 📄 **Múltiples formatos** (Markdown, PDF, Word) | 🌍 **Multiidioma** (ES/EN) | ⚡ **Serverless-ready** (Vercel)
+🚀 **Servicio AI** con Groq API | 📄 **Múltiples formatos** (Markdown, PDF, Word, Multifile .zip) | 🌍 **Multiidioma** (ES/EN) | ⚡ **Serverless-ready** (Vercel)
 
 ---
 
@@ -40,6 +40,7 @@
 ✅ **Rate Limiting** - Control de tokens con Redis (TPM/RPM)  
 ✅ **Procesamiento de ZIPs** - Procesa proyectos completos automáticamente  
 ✅ **Chunking Automático** - Divide proyectos grandes en secciones manejables  
+✅ **Salida Multifile** - Genera un .zip con N documentos .md (uno por módulo) desde proyectos ZIP  
 
 ---
 
@@ -124,7 +125,17 @@ curl -X POST http://localhost:5000/api/upload-zip \
   -F "language=es"
 ```
 
-### Opción 3: Previsualizar ZIP
+### Opción 3: Multifile (ZIP de documentos .md)
+
+```bash
+curl -X POST http://localhost:5000/api/upload-zip \
+  -F "file=@myproject.zip" \
+  -F "doc_type=multifile" \
+  -F "language=es"
+```
+Devuelve un `.zip` con un archivo `.md` por cada chunk de archivos relacionados.
+
+### Opción 4: Previsualizar ZIP
 
 ```bash
 curl -X POST http://localhost:5000/api/preview-zip \
@@ -206,8 +217,8 @@ Para detalles completos, consulta [ARCHITECTURE.md](docs/ARCHITECTURE.md)
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
 | `GET` | `/` | Welcome message y documentación de API |
-| `POST` | `/api/download/<type>` | Genera documentación desde JSON |
-| `POST` | `/api/upload-zip` | Procesa ZIP y genera documentación |
+| `POST` | `/api/download/<type>` | Genera documentación desde JSON (markdown, pdf, word) |
+| `POST` | `/api/upload-zip` | Procesa ZIP y genera documentación (markdown, pdf, word, **multifile**) |
 | `POST` | `/api/preview-zip` | Previsualiza contenido de ZIP |
 
 Para documentación interactiva, inicia la API y accede a `http://localhost:5000/`
@@ -230,12 +241,14 @@ proyecto_py/
 │   │   ├── chunking_service.py
 │   │   ├── cache_service.py
 │   │   ├── rate_limiter.py
-│   │   ├── zip_services.py
 │   │   └── ai/
 │   │       ├── ai_service.py
-│   │       ├── config.py
 │   │       ├── models.py
-│   │       └── prompts/
+│   │       ├── prompts/
+│   │       └── provider/
+│   │           ├── base_provider.py
+│   │           ├── groq_provider.py
+│   │           └── structures.py
 │   ├── export/              # Exportadores
 │   │   ├── pdf_gen.py
 │   │   └── docx_gen.py

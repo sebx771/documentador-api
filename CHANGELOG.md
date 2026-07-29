@@ -7,6 +7,20 @@ y este proyecto sigue [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 
 
+## [3.0.0] - 2026/07/25
+
+### ✨ Added
+- **Multifile Output** — La documentación de proyectos ZIP puede generarse como múltiples archivos .md (uno por chunk) empaquetados en un .zip
+  - Nuevo `doc_type="multifile"` en `/api/upload-zip`
+  - `ZipService.crear_zip()` — empaqueta N archivos .md en un .zip en memoria
+  - Cada archivo .md contiene la documentación de un grupo lógico de archivos del proyecto (chunk)
+  - Los nombres de archivo reflejan los módulos que contienen (ej. `auth+db.md`)
+
+### Changed
+- `DocumentationOrchestrator.process_zip()` acepta flag `multifile`; cuando está activo, salta la consolidación y retorna `{"files": {...}}` en vez de `{"documentation": "..."}`
+- `ZipController.upload_zip()` maneja `doc_type="multifile"` y devuelve un .zip descargable
+- Los flujos PDF/DOCX/Markdown (no multifile) permanecen idénticos
+
 ## [2.5.0] - 2026/07/20
 
 ### ✨ Added
