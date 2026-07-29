@@ -114,23 +114,25 @@ class ZipController:
                 "status": 400,
             }
 
-        if doc_type not in ["markdown", "pdf", "word"]:
+        if doc_type not in ["markdown", "pdf", "word", "multifile"]:
             return {
                 "type": "json",
                 "data": {
-                    "error": "Tipo de documento inválido. Use: markdown, pdf o word",
+                    "error": "Tipo de documento inválido. Use: markdown, pdf, word o multifile",
                     "codigo_error": "INVALID_DOC_TYPE",
                 },
                 "status": 400,
             }
 
         try:
+            is_multifile = doc_type == "multifile"
             result = self.orchestrator.process_zip(
                 zip_content=zip_content,
                 doc_type=doc_type,
                 extra_requirements=extra_requirements,
                 zip_service=self.zip_service,
                 language=language,
+                multifile=is_multifile,
             )
 
             elapsed = time.time() - start_time
@@ -143,7 +145,11 @@ class ZipController:
                 f"tiempo: {elapsed:.2f}s"
             )
 
-            if doc_type == "markdown":
+            if doc_type == "multifile":
+                return self._generar_zip_multifile(
+                    result["files"], cache_stats, elapsed
+                )
+            elif doc_type == "markdown":
                 return self._generar_markdown(
                     result["documentation"], cache_stats, elapsed
                 )
@@ -232,4 +238,22 @@ class ZipController:
             "content": content_bytes,
             "mimetype": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
             "filename": f'doc_{datetime.now().strftime("%Y%m%d_%H%M")}.docx',
+        }
+
+    def _generar_zip_multifile(
+        self, files_dict, cache_stats=None, elapsed_time=0.0
+    ):
+        logger.info(
+            f"Multifile ZIP generado exitosamente ({len(files_dict)} documentos, "
+            f"tiempo: {elapsed_time:.2f}s)"
+        )
+        logger.info(f"Estadísticas de cache: {cache_stats}")
+
+        zip_bytes = self.zip_service.crear_zip(files_dict)
+
+        return {
+            "type": "file",
+            "content": zip_bytes,
+            "mimetype": "application/zip",
+            "filename": f'documentacion_multifile_{datetime.now().strftime("%Y%m%d_%H%M")}.zip',
         }

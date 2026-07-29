@@ -72,8 +72,12 @@ class ZipService:
 
         return "\n".join(codigo_total), codigo_invalido
 
-    def crear_zip(self):
-        pass
+    def crear_zip(self, files: dict) -> bytes:
+        buffer = io.BytesIO()
+        with zipfile.ZipFile(buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
+            for filename, content in files.items():
+                zf.writestr(filename, content)
+        return buffer.getvalue()
 
     def listar_contenido_zip(self, contenido_bytes: bytes) -> list:
         resultado = []

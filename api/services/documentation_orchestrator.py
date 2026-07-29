@@ -1,4 +1,5 @@
 import logging
+import os
 import time
 from typing import List, Dict, Any
 
@@ -44,9 +45,11 @@ class DocumentationOrchestrator:
         extra_requirements: str = None,
         zip_service=None,
         language: str = None,
+        multifile: bool = False,
     ) -> Dict[str, Any]:
         """
         Procesa un ZIP y genera documentación consolidada.
+        Si multifile=True, retorna un dict de archivos en vez de un solo documento.
         """
         start_time = time.time()
 
@@ -90,12 +93,39 @@ class DocumentationOrchestrator:
             chunks, doc_type, extra_requirements, language=detected_lang
         )
 
+        elapsed_time = time.time() - start_time
+        cache_stats = self.cache_service.get_stats()
+
+        if multifile:
+            files_dict = {}
+            for idx, result in enumerate(chunk_results):
+                filename = self._generate_chunk_filename(result, idx)
+                files_dict[filename] = result.get("documentation", "")
+
+            logger.info(
+                f"Multifile completado: {len(files)} archivos, "
+                f"{len(chunks)} chunks -> {len(files_dict)} documentos, "
+                f"tiempo: {elapsed_time:.2f}s"
+            )
+
+            return {
+                "files": files_dict,
+                "metadata": {
+                    "total_files": len(files),
+                    "invalid_files_count": len(invalid_files),
+                    "invalid_files": invalid_files,
+                    "total_chunks": len(chunks),
+                    "total_docs": len(files_dict),
+                    "cache_stats": cache_stats,
+                    "elapsed_time_seconds": round(elapsed_time, 2),
+                    "input_size_bytes": input_size,
+                    "doc_type": doc_type,
+                },
+            }
+
         final_documentation = self._consolidate_documentation(
             chunk_results, extra_requirements, language=detected_lang
         )
-
-        elapsed_time = time.time() - start_time
-        cache_stats = self.cache_service.get_stats()
 
         logger.info(
             f"Procesamiento completado: {len(files)} archivos, "
@@ -154,6 +184,18 @@ class DocumentationOrchestrator:
                 continue
         return files
 
+    def _generate_chunk_filename(self, result: dict, index: int) -> str:
+        files = result.get("files", [])
+        if not files:
+            return f"chunk_{index + 1:03d}.md"
+        parts = []
+        for f in files[:2]:
+            name = os.path.splitext(os.path.basename(f))[0]
+            parts.append(name)
+        if len(files) > 2:
+            return f"{'+'.join(parts)}+{len(files) - 2}more.md"
+        return f"{'+'.join(parts)}.md"
+
     def _process_chunks(
         self,
         chunks: List[Dict],
@@ -194,6 +236,7 @@ class DocumentationOrchestrator:
                 results.append(
                     {
                         "chunk_index": idx,
+                        "files": chunk.get("files", []),
                         "documentation": f"Error: {str(e)}",
                         "error": True,
                     }
