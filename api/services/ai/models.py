@@ -4,8 +4,8 @@ models = {
 
    "chunking": {
        "provider": "groq",
-       "id": "meta-llama/llama-3.1-8b-instant",
-       "tpm": 14000
+       "id": "llama-3.3-70b-versatile",
+       "tpm": 12000
    },
     "final_doc": {
         "provider": "groq",
