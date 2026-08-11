@@ -29,6 +29,11 @@ class ZipService:
             ".DS_Store",
             "__pycache__",
             ".venv",
+            ".idea",
+            ".vscode"
+            "build"
+            "gradle"
+            ".gradle"
         }
         self.ignore_files = {"package-lock.json", "yarn.lock"}
 
