@@ -100,6 +100,17 @@ class DocumentadorIA:
             r"MODO FRAGMENTO ACTIVO:.*?(?=#{1,4} |\Z)",
             r"\*\*ACTIVE CHUNK MODE\*\*.*?(?=#{1,4} |\Z)",
             r"ACTIVE CHUNK MODE:.*?(?=#{1,4} |\Z)",
+
+            r"NO level \d headings.*?(?=\n\n|\n[A-Z0-9#\-\*]|\Z)",
+            r"Follow CHUNK_STRUCTURE.*?(?=\n\n|\n[A-Z0-9#\-\*]|\Z)",
+            r"STRICTLY SPANISH\..*?(?=\n\n|\n[A-Z0-9#\-\*]|\Z)",
+            r"Write for easy consolidation later\..*?(?=\n\n|\n[A-Z0-9#\-\*]|\Z)",
+        
+            r"Input Code:.*?\n",
+            r"Deconstruct Input Code:.*?(?=\n\n|\n[A-Z0-9#\-\*]|\Z)",
+        
+             # Placeholders de estructura no sustituidos
+            r"\[Nombre del Módulo/Archivo\]"
         ]
         for pattern in patterns:
             text = re.sub(pattern, "", text, flags=re.DOTALL)
