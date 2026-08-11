@@ -20,6 +20,7 @@ class ZipService:
             ".xml",
             ".yml",
             ".yaml",
+            ".kt"
         }
         self.ignore_folders = {
             "node_modules",
