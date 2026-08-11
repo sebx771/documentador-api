@@ -5,7 +5,16 @@ Todos los cambios notables en EasyDocs se documenta en este archivo.
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 y este proyecto sigue [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.1.0] - 2026/08/11
 
+## ✨Added
+- se agrega en la lista de extensiones permitidas el `.kt`(kotlin)
+- se agregaron mas folders a la black list para evitar documentar informacion innecsaria
+ - `.vscode`
+ - `.idea`
+ - `.gradle`
+ - `build`
+- se agregaron los patrones en ingles en la lista de patrones a limpiar 
 
 ## [3.0.0] - 2026/07/25
 
