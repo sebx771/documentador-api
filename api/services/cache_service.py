@@ -4,14 +4,11 @@ import json
 import redis
 from typing import Optional, Dict, Any
 import threading
-from dotenv import load_dotenv
-import os
 
-load_dotenv()
+from ..config import config
 
 
 logger = logging.getLogger(__name__)
-REDIS_URL = os.getenv("REDIS_URL")
 
 
 _global_cache_instance = None
@@ -52,7 +49,7 @@ class CacheService:
         # Uso de Connection Pool: Vital para Serverless
 
         pool = redis.ConnectionPool.from_url(
-            REDIS_URL,
+            config.REDIS_URL,
             db=0,
             decode_responses=True,
             # Evita que una función serverless deje colgada una conexión

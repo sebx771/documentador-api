@@ -1,14 +1,10 @@
 import time
 import logging
 import redis
-import os
 import math
-from dotenv import load_dotenv
-
-load_dotenv()
+from ..config import config
 
 logger = logging.getLogger(__name__)
-REDIS_URL = os.getenv("REDIS_URL")
 
 
 class EndpointRateLimiter:
@@ -40,14 +36,14 @@ class EndpointRateLimiter:
             self.redis = redis_client
         else:
             try:
-                if not REDIS_URL:
+                if not config.REDIS_URL:
                     logger.error(
                         "REDIS_URL is not set. EndpointRateLimiter will operate in fail-open mode."
                     )
                     self.redis = None
                 else:
                     pool = redis.ConnectionPool.from_url(
-                        REDIS_URL,
+                        config.REDIS_URL,
                         db=0,
                         decode_responses=True,
                         socket_timeout=5,

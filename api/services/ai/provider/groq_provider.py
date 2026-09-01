@@ -1,15 +1,16 @@
-import os
 import logging
 from groq import Groq
 from .base_provider import BaseAIProvider
 from .structures import ChatCompletionResponse, ChatCompletionChoice, ChatCompletionMessage
+from ....config import config
 
 logger = logging.getLogger(__name__)
 
 
 class GroqProvider(BaseAIProvider):
     def _get_env_api_key(self) -> str | None:
-        return os.getenv("GROQ_API_KEY") or os.getenv("API_KEY")
+        groq_api_key= config.GROQ_API_KEY
+        return groq_api_key
 
     def _initialize_client(self) -> Groq:
         client = Groq(api_key=self.api_key)

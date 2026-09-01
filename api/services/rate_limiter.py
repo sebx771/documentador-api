@@ -1,14 +1,10 @@
 import time
 import logging
 import redis
-import os
-from dotenv import load_dotenv
 
-load_dotenv()
+from ..config import config
 
 logger = logging.getLogger(__name__)
-
-REDIS_URL = os.getenv("REDIS_URL")
 
 
 class Ratelimiter:
@@ -55,7 +51,7 @@ class Ratelimiter:
 
         try:
             pool = redis.ConnectionPool.from_url(
-                REDIS_URL, db=0, decode_responses=True, socket_timeout=5
+                config.REDIS_URL, db=0, decode_responses=True, socket_timeout=5
             )
             self.redis = redis.Redis(connection_pool=pool)
         except Exception as e:
