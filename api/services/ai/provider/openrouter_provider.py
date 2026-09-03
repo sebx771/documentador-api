@@ -1,7 +1,7 @@
 from openai import OpenAI
 from api.config import config
 from .base_provider import BaseAIProvider
-from .structures import ChatCompletionResponse
+from .structures import ChatCompletionResponse, ChatCompletionChoice, ChatCompletionMessage
 
 class OpenRouterProvider(BaseAIProvider):
     """
@@ -39,8 +39,19 @@ class OpenRouterProvider(BaseAIProvider):
             )
             
             content = response.choices[0].message.content
-            return ChatCompletionResponse(content=content, raw_response=response)
+            return ChatCompletionResponse(
+                choices=[
+                    ChatCompletionChoice(
+                        message=ChatCompletionMessage(content=content)
+                    )
+                ]
+            )
 
         except Exception as e:
-            # Preserva el mensaje de error para que el orquestador detecte rate limits (429)
-            raise Exception(f"Error en OpenRouterProvider ({model}): {str(e)}")
+            # Propaga la excepción original preservando sus atributos (p. ej. .response
+            # con el header Retry-After) para que el orquestador detecte rate limits (429).
+            # El tipo de excepción de OpenAI ya incluye "rate limit"/"429" en su mensaje.
+            if "429" not in str(e).lower() and "rate limit" not in str(e).lower() \
+               and "too many requests" not in str(e).lower():
+                raise type(e)(f"Error en OpenRouterProvider ({model}): {e}")
+            raise
