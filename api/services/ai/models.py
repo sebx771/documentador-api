@@ -1,8 +1,8 @@
 models = {
     "chunking": {
-        "provider": "groq",
-        "id": "llama-3.3-70b-versatile",
-        "tpm": 12000
+        "provider": "openrouter",
+        "id": "minimax/minimax-m3:free",
+        "tpm": 60000
     },
     "final_doc": {
         "provider": "openrouter",

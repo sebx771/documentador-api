@@ -14,7 +14,9 @@ class ChunkingService:
     # Regla aproximada: 1 token ≈ 4 caracteres de código fuente.
     # El prompt del sistema añade ~500-800 tokens de overhead, por eso el
     # límite real debe ser bastante menor que el TPM del modelo.
-    DEFAULT_CHUNK_MAX_TOKENS = 1600
+    # 8000: aprovecha la amplia ventana de contexto del modelo de chunking
+    # (minimax-m3, 1M) reduciendo el número de requests diarias consumidas.
+    DEFAULT_CHUNK_MAX_TOKENS = 8000
     DEFAULT_FILES_PER_CHUNK = 2
 
     def __init__(self, max_chunk_tokens: int = None, max_files_per_chunk: int = None):
