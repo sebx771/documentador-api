@@ -48,6 +48,18 @@ class DocumentadorIA:
         provider_name = self._model_to_provider.get(model_id, "groq")
         return self.providers[provider_name]
 
+    def _get_retry_after(self, error: Exception):
+        """Extrae el header Retry-After del error de la API si está disponible."""
+        try:
+            response = getattr(error, "response", None)
+            if response is not None:
+                headers = response.headers
+                if headers and "retry-after" in headers:
+                    return int(headers["retry-after"])
+        except Exception:
+            pass
+        return None
+
     def estimate_tokens(self, system_prompt: str, user_prompt: str) -> int:
         """
         Estimación mejorada de tokens para el par (system + user).
@@ -160,7 +172,7 @@ class DocumentadorIA:
         last_error = None
         for current_model in retry_queue:
             # Reintentar el mismo modelo tras backoff si el rate limiter bloquea
-            model_retries = 3
+            model_retries = 5
             for attempt in range(model_retries):
                 try:
                     limiter = self.limiters.get(current_model, {}).get("ratelimiter")
@@ -178,7 +190,7 @@ class DocumentadorIA:
 
                     if limiter and not limiter.allow_request(tokens_needed):
                         if attempt < model_retries - 1:
-                            wait = 1 * (2 ** attempt)
+                            wait = 2 * (2 ** attempt)
                             logger.warning(
                                 f"Rate limit local excedido para {current_model}. "
                                 f"Reintento {attempt + 1}/{model_retries} en {wait}s..."
@@ -199,7 +211,7 @@ class DocumentadorIA:
                         f"Llamando a {current_model} (Rol: {model_role}, Lang: {lang})"
                     )
 
-                    max_output_tokens = 4096 if (not is_chunk or model_role == "final_doc") else 2048
+                    max_output_tokens = 4096 if not is_chunk else 6000
 
                     provider = self._get_provider_for_model(current_model)
                     response = provider.create_chat_completion(
@@ -228,8 +240,9 @@ class DocumentadorIA:
                         or "rate limit" in error_str
                         or "too many requests" in error_str
                     ):
+                        retry_after = self._get_retry_after(e)
                         if attempt < model_retries - 1:
-                            wait = 1 * (2 ** attempt)
+                            wait = retry_after or (2 * (2 ** attempt))
                             logger.warning(
                                 f"429 en {current_model}. Reintento {attempt + 1}/{model_retries} en {wait}s..."
                             )
@@ -240,7 +253,7 @@ class DocumentadorIA:
                                 f"MODEL FAILOVER: {current_model} reportó 429 tras {model_retries} intentos. "
                                 f"Saltando al siguiente modelo."
                             )
-                            time.sleep(2)
+                            time.sleep(3)
                             break
                     else:
                         logger.error(f"Error crítico en {current_model}: {e}")
