@@ -5,6 +5,26 @@ Todos los cambios notables en EasyDocs se documenta en este archivo.
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 y este proyecto sigue [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.0] - 2026/09/02
+
+### ✨ Added
+- **Centralización de configuración de variables de entorno** — nuevo módulo `api/config.py`
+  - Lectura única y centralizada de `GROQ_API_KEY` y `OPENROUTER_API_KEY` desde `.env`
+  - Acceso tipado mediante propiedades (`openrouter_api_key`, etc.)
+  - Validación de arranque: requiere al menos `GROQ_API_KEY` u `OPENROUTER_API_KEY`
+  - Reemplaza los accesos dispersos a `os.getenv` en el código
+- **OpenRouterProvider** — nuevo proveedor basado en el SDK de OpenAI (`base_url = openrouter.ai/api/v1`)
+  - Permite consumo de modelos gratuitos con amplia ventana de contexto
+  - Envía headers de referer/título (HTTP-Referer, X-Title) requeridos por OpenRouter
+  - Preserva mensajes de error (429/rate limit) para que el orquestador detecte fallovers
+
+### Changed
+- `models.py` — se reordena el routing de modelos:
+  - `chunking` mantiene **groq** (`llama-3.3-70b-versatile`, TPM 12000)
+  - `final_doc`, `fallback` y `emergency` migran a **openrouter** (`google/gemma-4-31b-it:free`, `z-ai/glm-5.2:free`, `cohere/north-mini-code:free`)
+  - TPM de consolidación elevados (hasta 100000) para aprovechar la amplia ventana de contexto
+- `DocumentadorIA` — registra `OpenRouterProvider` en el orquestador de providers y resuelve el routing por modelo vía `_get_provider_for_model`
+
 ## [3.1.0] - 2026/08/11
 
 ## ✨Added
