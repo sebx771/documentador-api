@@ -3,7 +3,7 @@ import time
 import re
 from .prompts import get_prompts, DANGEROUS_WORDS
 from .models import models
-from .provider import GroqProvider
+from .provider import GroqProvider, OpenRouterProvider
 from ..rate_limiter import Ratelimiter
 
 
@@ -22,6 +22,7 @@ class DocumentadorIA:
         self.limiters = {}
         self.providers = {
             "groq": GroqProvider(),
+            "openrouter": OpenRouterProvider(),
         }
         self._model_to_provider = {
             config["id"]: config.get("provider", "groq")
