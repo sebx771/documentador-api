@@ -61,7 +61,8 @@ EasyDocs utiliza una **arquitectura de servicios desacoplada** optimizada para p
                                 │                   │
                           ┌─────▼───────────────────▼─────┐
                           │         Response              │
-                          │   (JSON file o .zip bytes)    │
+                          │   (archivo o .zip bytes,      │
+                          │    JSON solo en errores)      │
                           └───────────────────────────────┘
 ```
 
@@ -88,7 +89,7 @@ EasyDocs utiliza una **arquitectura de servicios desacoplada** optimizada para p
 - Procesa archivos ZIP completos
 - Orquesta el flujo completo de generación
 - Soporta `doc_type`: markdown, pdf, word, **multifile**
-- Devuelve documentación consolidada (+ metadata) o .zip con N .md
+- Devuelve documento consolidado (.md/.pdf/.docx) o .zip con N .md (multifile)
 
 ### 3. **DocumentationOrchestrator** (`api/services/documentation_orchestrator.py`)
 
@@ -253,12 +254,12 @@ POST /api/download/markdown
 ↓
 DocumentadorIA.generar()
 ↓
-{
-  "documentation": "# Documentation...",
-  "metadata": {...}
-}
+Descarga el archivo: documentacion_2024-....md
+(MIME: text/markdown)
 ```
 ⏱️ **Tiempo esperado:** 1-3 segundos
+
+> Los formatos `pdf` y `docx` del mismo endpoint descargan `application/pdf` y `.docx` respectivamente. No se devuelve JSON en éxito.
 
 ### Flujo 2: Proyecto desde ZIP — Consolidado (markdown, pdf, word)
 
@@ -285,12 +286,14 @@ POST /api/upload-zip
             ├─ Merge secciones
             └─ Apply Extra Requirements
                ↓
-               {
-                 "documentation": "# Docs...",
-                 "metadata": { "total_files": 20, ... }
-               }
+               Descarga el archivo resultante según doc_type:
+               ├─ markdown → .md (text/markdown)
+               ├─ pdf      → .pdf (application/pdf)
+               └─ word     → .docx (application/vnd.openxmlformats-...)
 ```
 ⏱️ **Tiempo esperado:** 10-30 segundos
+
+> La metadata (total_files, total_chunks, cache_stats, etc.) solo se usa internamente para logging; no se devuelve al cliente con el archivo.
 
 ### Flujo 3: Proyecto desde ZIP — Multifile
 
@@ -414,39 +417,31 @@ logger.error(f"Error en IA: {str(e)}")
 
 ### Métricas Retornadas
 
-#### Modo consolidado (markdown/pdf/word)
+La API no expone métricas en las respuestas de éxito. La metadata (total_files, total_chunks, cache_stats, elapsed_time_seconds, input_size_bytes, etc.) se calcula en `ZipController`/`DownloadController` pero solo se registra en logs.
+
+#### Respuesta JSON de estructura del ZIP (`POST /api/preview-zip`)
 ```json
-{
-  "documentation": "# Documentación...",
-  "metadata": {
-    "total_files": 20,
-    "total_chunks": 4,
-    "cache_stats": {
-      "hits": 1,
-      "misses": 3,
-      "hit_rate_percent": 25
-    },
-    "elapsed_time_seconds": 15.3,
-    "input_size_bytes": 524288
+[
+  {
+    "file": "src/main.py",
+    "language": "py",
+    "valid": true,
+    "size": "4.52kb"
+  },
+  {
+    "file": "assets/logo.png",
+    "language": "png",
+    "valid": false,
+    "size": "120.1kb"
   }
-}
+]
 ```
 
-#### Modo multifile
+#### Respuestas de error (JSON)
 ```json
 {
-  "files": {
-    "main.md": "# Documentación de main...",
-    "api+db.md": "# Documentación de api y db..."
-  },
-  "metadata": {
-    "total_files": 20,
-    "total_chunks": 4,
-    "total_docs": 4,
-    "cache_stats": { ... },
-    "elapsed_time_seconds": 15.3,
-    "input_size_bytes": 524288
-  }
+  "error": "Solo se permiten archivos .zip",
+  "codigo_error": "INVALID_FILE_TYPE"
 }
 ```
 

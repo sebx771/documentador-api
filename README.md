@@ -144,22 +144,19 @@ curl -X POST http://localhost:5000/api/preview-zip \
 
 ### Respuesta Exitosa
 
-La API devuelve la respuesta en dos formatos, dependiendo del endpoint y del resultado del controlador:
+Los endpoints de generación no devuelven JSON: descargan directamente el archivo generado.
 
-1) **Respuesta JSON** (cuando `result["type"] == "json"`):
+- `/api/download/<type>` → **archivo** (`.md`, `.pdf` o `.docx`, según `type`)
+- `/api/upload-zip` con `doc_type` en `markdown|pdf|word` → **archivo** de documentación consolidada
+- `/api/upload-zip` con `doc_type=multifile` → **.zip** con un `.md` por cada chunk
 
+Los únicos endpoints que devuelven JSON como respuesta normal son `GET /`, `GET /api/download` (información) y `POST /api/preview-zip` (estructura del ZIP).
+
+**Respuesta JSON (casos de error), por ejemplo:**
 ```json
 {
-  "documentation": "# Documentación del Proyecto\n...",
-  "metadata": {
-    "total_files": 12,
-    "total_chunks": 3,
-    "cache_stats": {
-      "hit_rate_percent": 25
-    },
-    "elapsed_time_seconds": 4.32,
-    "doc_type": "markdown"
-  }
+  "error": "Tipo de archivo no válido. Use 'pdf', 'markdown' o 'docx'",
+  "codigo_error": "INVALID_FILE_TYPE"
 }
 ```
 
@@ -216,10 +213,11 @@ Para detalles completos, consulta [ARCHITECTURE.md](docs/ARCHITECTURE.md)
 
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
-| `GET` | `/` | Welcome message y documentación de API |
-| `POST` | `/api/download/<type>` | Genera documentación desde JSON (markdown, pdf, word) |
-| `POST` | `/api/upload-zip` | Procesa ZIP y genera documentación (markdown, pdf, word, **multifile**) |
-| `POST` | `/api/preview-zip` | Previsualiza contenido de ZIP |
+| `GET` | `/` | Welcome message y documentación de API (JSON) |
+| `GET` | `/api/download` | Información de los endpoints de descarga (JSON) |
+| `POST` | `/api/download/<type>` | Genera documentación desde JSON y descarga el archivo (`.md`, `.pdf` o `.docx`) |
+| `POST` | `/api/upload-zip` | Procesa ZIP y descarga la documentación (`.md`, `.pdf`, `.docx` o `.zip` multifile) |
+| `POST` | `/api/preview-zip` | Previsualiza estructura del ZIP (JSON) |
 
 Para documentación interactiva, inicia la API y accede a `http://localhost:5000/`
 

@@ -22,7 +22,7 @@ def download(file_type):
     if hasattr(data, "read"):
         codigo_fuente = data.read().decode("utf-8")
     else:
-        codigo_fuente = data.get("codigo", "")
+        codigo_fuente = data.get("code", "")
 
     # Extraer idioma
     language = data.get("language") if isinstance(data, dict) else None

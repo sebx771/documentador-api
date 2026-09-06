@@ -36,7 +36,7 @@ class DownloadController:
                     "path": "/api/download/pdf",
                     "description": "Generates a PDF with the documentation of the provided code",
                     "body": {
-                        "codigo": "Source code to document (required)",
+                        "code": "Source code to document (required)",
                         "extra": "Additional requirements (optional)",
                     },
                 },
@@ -45,7 +45,7 @@ class DownloadController:
                     "path": "/api/download/markdown",
                     "description": "Generates a Markdown file with the documentation of the provided code",
                     "body": {
-                        "codigo": "Source code to document (required)",
+                        "code": "Source code to document (required)",
                         "extra": "Additional requirements (optional)",
                     },
                 },
@@ -54,7 +54,7 @@ class DownloadController:
                     "path": "/api/download/docx",
                     "description": "Generates a Word file (.docx) with the documentation of the provided code",
                     "body": {
-                        "codigo": "Source code to document (required)",
+                        "code": "Source code to document (required)",
                         "extra": "Additional requirements (optional)",
                     },
                 },
