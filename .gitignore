@@ -9,3 +9,4 @@ __pycache__
 # flujo de agentes
 .kilo
 .agents
+skills-lock.json
