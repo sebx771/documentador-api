@@ -152,6 +152,24 @@ Accede a `http://localhost:5000` en tu navegador.
 
 ---
 
+## Dockerización
+
+Con Docker Desktop instalado y un archivo `.env` configurado, puedes levantar la API junto con Redis local:
+
+```powershell
+docker compose up --build
+```
+
+La API quedará disponible en `http://localhost:5000`. Para detener los contenedores:
+
+```powershell
+docker compose down
+```
+
+El Compose incluido utiliza el servicio Redis local para desarrollo. Para desplegar la imagen en una plataforma no serverless usando Upstash, configura allí `REDIS_URL` con la URL `rediss://` de Upstash; en ese caso no necesitas levantar el servicio Redis del Compose.
+
+---
+
 ## Instalación para Desarrollo
 
 ### Instalar Herramientas de Desarrollo
