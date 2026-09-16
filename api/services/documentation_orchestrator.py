@@ -53,7 +53,7 @@ class DocumentationOrchestrator:
         """
         start_time = time.time()
 
-        logger.info(f"Iniciando procesamiento de ZIP ({len(zip_content)} bytes)")
+        logger.debug(f"Iniciando procesamiento de ZIP ({len(zip_content)} bytes)")
 
         input_size = len(zip_content)
         if input_size > self.max_input_size:
@@ -67,7 +67,7 @@ class DocumentationOrchestrator:
         if not files:
             raise ValueError("No se encontraron archivos válidos para documentar")
 
-        logger.info(
+        logger.debug(
             f"Archivos extraídos: {len(files)} válidos, {len(invalid_files)} inválidos"
         )
 
@@ -75,17 +75,17 @@ class DocumentationOrchestrator:
             files=files, doc_type=doc_type, extra_requirements=extra_requirements
         )
 
-        logger.info(f"Chunks creados: {len(chunks)}")
+        logger.debug(f"Chunks creados: {len(chunks)}")
 
         if language:
             detected_lang = language
-            logger.info(f"Idioma forzado vía parámetros: {detected_lang}")
+            logger.debug(f"Idioma forzado vía parámetros: {detected_lang}")
         else:
             sample_code = chunks[0]["content"] if chunks else ""
             detected_lang = self.documentador.detect_language(
                 sample_code, extra_requirements
             )
-            logger.info(
+            logger.debug(
                 f"Coherencia de idioma establecida (Smart Detection): {detected_lang}"
             )
 
@@ -102,7 +102,7 @@ class DocumentationOrchestrator:
                 filename = self._generate_chunk_filename(result, idx)
                 files_dict[filename] = result.get("documentation", "")
 
-            logger.info(
+            logger.debug(
                 f"Multifile completado: {len(files)} archivos, "
                 f"{len(chunks)} chunks -> {len(files_dict)} documentos, "
                 f"tiempo: {elapsed_time:.2f}s"
@@ -127,7 +127,7 @@ class DocumentationOrchestrator:
             chunk_results, extra_requirements, language=detected_lang
         )
 
-        logger.info(
+        logger.debug(
             f"Procesamiento completado: {len(files)} archivos, "
             f"{len(chunks)} chunks, tiempo: {elapsed_time:.2f}s"
         )
@@ -205,7 +205,7 @@ class DocumentationOrchestrator:
     ) -> List[Dict]:
         results = []
         for idx, chunk in enumerate(chunks):
-            logger.info(f"Procesando chunk {idx + 1}/{len(chunks)}")
+            logger.debug(f"Procesando chunk {idx + 1}/{len(chunks)}")
             cache_key = self.cache_service.generate_hash(
                 content=chunk["content"],
                 doc_type=doc_type,

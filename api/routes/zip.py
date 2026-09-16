@@ -35,7 +35,7 @@ def upload_zip():
     if language:
         # Normalizar a los soportados: 'en' si contiene 'en', de lo contrario 'es'
         language = "en" if "en" in language.lower() else "es"
-        logger.info(f"Idioma detectado/forzado: {language}")
+        logger.debug(f"Idioma detectado/forzado: {language}")
 
     result = controller.upload_zip(
         file=file,

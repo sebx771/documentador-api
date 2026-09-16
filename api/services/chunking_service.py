@@ -98,7 +98,7 @@ class ChunkingService:
                 self._finalize_chunk(current_chunk, doc_type, extra_requirements)
             )
 
-        logger.info(
+        logger.debug(
             f"Chunking completado: {len(files)} archivos -> {len(chunks)} chunks "
             f"(max_files: {self.max_files_per_chunk}, max_tokens: {self.max_chunk_tokens})"
         )
@@ -158,7 +158,7 @@ class ChunkingService:
                 "language": language,
             })
 
-        logger.info(
+        logger.debug(
             f"Archivo '{filename}' dividido en {len(parts)} partes "
             f"({self.estimate_tokens(content)} tk totales)"
         )

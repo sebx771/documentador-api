@@ -24,7 +24,7 @@ def get_global_cache(
             _global_cache_instance = CacheService(
                 max_size=max_size, ttl_seconds=ttl_seconds, enable_lru=enable_lru
             )
-            logger.info("Cache global inicializado con Redis")
+            logger.debug("Cache global inicializado con Redis")
     return _global_cache_instance
 
 

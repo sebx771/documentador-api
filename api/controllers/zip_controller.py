@@ -94,7 +94,7 @@ class ZipController:
         zip_content = file.read()
         input_size = len(zip_content)
 
-        logger.info(f"ZIP recibido: {filename}, tamaño: {input_size} bytes")
+        logger.debug(f"ZIP recibido: {filename}, tamaño: {input_size} bytes")
 
         if input_size > MAX_ZIP_SIZE:
             logger.warning(f"Archivo demasiado grande: {input_size} bytes")
@@ -138,7 +138,7 @@ class ZipController:
             elapsed = time.time() - start_time
             cache_stats = result["metadata"].get("cache_stats", {})
 
-            logger.info(
+            logger.debug(
                 f"ZIP procesado exitosamente: {result['metadata']['total_files']} archivos, "
                 f"{result['metadata']['total_chunks']} chunks, "
                 f"hits de cache: {cache_stats.get('hits', 0)}, "
@@ -181,10 +181,10 @@ class ZipController:
         self, contenido, cache_stats=None, elapsed_time=0.0, from_cache=False
     ):
         """Genera y retorna un archivo Markdown."""
-        logger.info(
+        logger.debug(
             f"Documentación Markdown generada exitosamente (cache: {from_cache}, tiempo: {elapsed_time:.2f}s)"
         )
-        logger.info(f"Estadísticas de cache: {cache_stats}")
+        logger.debug(f"Estadísticas de cache: {cache_stats}")
 
         if isinstance(contenido, str):
             contenido = contenido.encode("utf-8")
@@ -200,10 +200,10 @@ class ZipController:
         self, contenido, cache_stats=None, elapsed_time=0.0, from_cache=False
     ):
         """Genera y retorna un archivo PDF."""
-        logger.info(
+        logger.debug(
             f"PDF generado exitosamente (cache: {from_cache}, tiempo: {elapsed_time:.2f}s)"
         )
-        logger.info(f"Estadísticas de cache: {cache_stats}")
+        logger.debug(f"Estadísticas de cache: {cache_stats}")
 
         pdf = EasyDocsPDF()
         pdf.construir_desde_markdown(contenido)
@@ -220,10 +220,10 @@ class ZipController:
         self, contenido, cache_stats=None, elapsed_time=0.0, from_cache=False
     ):
         """Genera y retorna un archivo DOCX."""
-        logger.info(
+        logger.debug(
             f"DOCX generado exitosamente (cache: {from_cache}, tiempo: {elapsed_time:.2f}s)"
         )
-        logger.info(f"Estadísticas de cache: {cache_stats}")
+        logger.debug(f"Estadísticas de cache: {cache_stats}")
 
         docx = EasyDocsDOCX()
         docx.agregar_encabezado()
@@ -243,11 +243,11 @@ class ZipController:
     def _generar_zip_multifile(
         self, files_dict, cache_stats=None, elapsed_time=0.0
     ):
-        logger.info(
+        logger.debug(
             f"Multifile ZIP generado exitosamente ({len(files_dict)} documentos, "
             f"tiempo: {elapsed_time:.2f}s)"
         )
-        logger.info(f"Estadísticas de cache: {cache_stats}")
+        logger.debug(f"Estadísticas de cache: {cache_stats}")
 
         zip_bytes = self.zip_service.crear_zip(files_dict)
 

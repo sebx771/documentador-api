@@ -167,7 +167,7 @@ class DocumentadorIA:
 
         # Estimar tokens UNA VEZ (no cambia entre reintentos del mismo prompt)
         tokens_needed = self.estimate_tokens(system_message, user_message)
-        logger.info(f"Tokens estimados para esta petición: {tokens_needed}")
+        logger.debug(f"Tokens estimados para esta petición: {tokens_needed}")
 
         last_error = None
         for current_model in retry_queue:
@@ -207,7 +207,7 @@ class DocumentadorIA:
                             )
                             break
 
-                    logger.info(
+                    logger.debug(
                         f"Llamando a {current_model} (Rol: {model_role}, Lang: {lang})"
                     )
 
@@ -355,7 +355,7 @@ Reglas obligatorias:
 
     def apply_extra(self, docs: str, extra: str = None, lang: str = None) -> str:
         """Aplica requisitos extras al documento final, respetando el idioma original."""
-        logger.info("Aplicando requisitos extra a la documentación")
+        logger.debug("Aplicando requisitos extra a la documentación")
         if not extra or not extra.strip():
             return docs
 
@@ -384,7 +384,7 @@ Reglas obligatorias:
         Realiza una pasada final de IA para consolidar tablas, deduplicar
         y unificar el estilo de la documentación.
         """
-        logger.info(f"Iniciando consolidación final de IA (Lang: {lang})")
+        logger.debug(f"Iniciando consolidación final de IA (Lang: {lang})")
         return self.generar(
             codigo_fuente=docs,
             tipo="markdown",

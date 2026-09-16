@@ -3,12 +3,10 @@ import logging
 from .routes.download import download_routes 
 from .routes.zip import zip_routes
 from flask_cors import CORS
+from .logging_config import setup_logging
 
 # Configurar logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+setup_logging()
 logger = logging.getLogger(__name__)
 
 API_VERSION = "2.5.0"

@@ -7,10 +7,6 @@ import io
 import logging
 import time
 
-# Configurar logging
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
 logger = logging.getLogger(__name__)
 
 # Constantes para validación
@@ -106,16 +102,16 @@ class DownloadController:
 
             cached_result = self.cache.get(cache_key)
 
-            logger.info(f"Key de cache: {cache_key[:16]}...")
+            logger.debug(f"Key de cache: {cache_key[:16]}...")
 
             if cached_result:
-                logger.info(f"Cache HIT para código: {len(codigo_fuente)} caracteres")
+                logger.debug(f"Cache HIT para código: {len(codigo_fuente)} caracteres")
                 resultado_markdown = cached_result.get("documentation", "")
                 from_cache = True
             else:
-                logger.info(f"Cache MISS, generando con IA...")
+                logger.debug(f"Cache MISS, generando con IA...")
                 # Generar documentación con IA
-                logger.info(
+                logger.debug(
                     f"Generando documentación {file_type} para el código recibido"
                 )
                 resultado_markdown = self.doc.generar(
@@ -160,10 +156,10 @@ class DownloadController:
         self, contenido, cache_stats=None, elapsed_time=0.0, from_cache=False
     ):
         """Genera y retorna un archivo Markdown."""
-        logger.info(
+        logger.debug(
             f"Documentación Markdown generada exitosamente (cache: {from_cache}, tiempo: {elapsed_time:.2f}s)"
         )
-        logger.info(f"Estadísticas de cache: {cache_stats}")
+        logger.debug(f"Estadísticas de cache: {cache_stats}")
 
         if isinstance(contenido, str):
             contenido = contenido.encode("utf-8")
@@ -179,10 +175,10 @@ class DownloadController:
         self, contenido, cache_stats=None, elapsed_time=0.0, from_cache=False
     ):
         """Genera y retorna un archivo PDF."""
-        logger.info(
+        logger.debug(
             f"PDF generado exitosamente (cache: {from_cache}, tiempo: {elapsed_time:.2f}s)"
         )
-        logger.info(f"Estadísticas de cache: {cache_stats}")
+        logger.debug(f"Estadísticas de cache: {cache_stats}")
 
         # Crear el PDF
         pdf = EasyDocsPDF()
@@ -202,10 +198,10 @@ class DownloadController:
         self, contenido, cache_stats=None, elapsed_time=0.0, from_cache=False
     ):
         """Genera y retorna un archivo DOCX."""
-        logger.info(
+        logger.debug(
             f"DOCX generado exitosamente (cache: {from_cache}, tiempo: {elapsed_time:.2f}s)"
         )
-        logger.info(f"Estadísticas de cache: {cache_stats}")
+        logger.debug(f"Estadísticas de cache: {cache_stats}")
 
         # Crear el DOCX
         docx = EasyDocsDOCX()

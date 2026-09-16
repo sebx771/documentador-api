@@ -8,6 +8,7 @@ services:
       - .env
     environment:
       REDIS_URL: redis://redis:6379/0
+      DEBUG: "false"
     depends_on:
       redis:
         condition: service_healthy

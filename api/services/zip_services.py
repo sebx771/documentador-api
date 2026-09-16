@@ -3,6 +3,9 @@ from ..export.docx_gen import EasyDocsDOCX
 import io
 import os
 import time
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class ZipService:
@@ -73,7 +76,7 @@ class ZipService:
                             )
                             continue
         except zipfile.BadZipFile as e:
-            print(f"Error al extraer el ZIP: {str(e)}")
+            logger.error(f"Error al extraer el ZIP: {str(e)}")
             raise Exception("Archivo ZIP inválido o corrupto")
 
         return "\n".join(codigo_total), codigo_invalido
