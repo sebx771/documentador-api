@@ -114,19 +114,19 @@ python -m flask --app api.main run --reload
 
 ## 🐳 Dockerización
 
-Requiere Docker Desktop y un archivo `.env` con las claves de IA. Para levantar la API y Redis local:
+Requiere Docker Desktop y un archivo `.env` con las claves de IA. Para desarrollo, levanta la API y Redis local con:
 
 ```bash
-docker compose up --build
+docker compose -f docker-compose-dev.yml up --build
 ```
 
 La API estará disponible en `http://localhost:5000`. Para detener los servicios:
 
 ```bash
-docker compose down
+docker compose -f docker-compose-dev.yml down
 ```
 
-El `docker-compose.yml` usa Redis local. En un despliegue Docker con Upstash, configura `REDIS_URL` en el entorno de la plataforma y ejecuta solo la imagen construida con el `Dockerfile`.
+El `docker-compose.yml` de producción no levanta Redis y lee `REDIS_URL` desde `.env` o desde las variables del hosting. Para usar Upstash, configura allí su URL `rediss://`.
 
 Estructura principal:
 ```

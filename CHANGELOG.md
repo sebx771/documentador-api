@@ -5,6 +5,20 @@ Todos los cambios notables en EasyDocs se documenta en este archivo.
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 y este proyecto sigue [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.1] - 2026/09/17
+
+### Added
+- **Docker Compose separado por entorno**
+  - `docker-compose-dev.yml` levanta la API junto con Redis local.
+  - `docker-compose.yml` de producción levanta solo la API y lee `REDIS_URL` desde el entorno, permitiendo usar Upstash.
+
+### Changed
+- **Refactorización del logging**
+  - Configuración centralizada del logging mediante `api/logging_config.py`.
+  - Soporte de nivel `DEBUG` configurable por entorno.
+  - Reducción de mensajes verbosos en producción, manteniendo detalles útiles para depuración.
+- README y guía de instalación actualizados con los comandos de Docker para desarrollo y producción.
+
 ## [3.2.0] - 2026/09/02
 
 ### ✨ Added
