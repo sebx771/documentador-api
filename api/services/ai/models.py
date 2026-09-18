@@ -1,7 +1,7 @@
 models = {
     "chunking": {
         "provider": "openrouter",
-        "id": "minimax/minimax-m3:free",
+        "id": "qwen/qwen3.8-27b:free",
         "tpm": 60000
     },
     "final_doc": {
