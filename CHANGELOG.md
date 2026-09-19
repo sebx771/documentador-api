@@ -5,6 +5,23 @@ Todos los cambios notables en EasyDocs se documenta en este archivo.
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 y este proyecto sigue [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.2] - 2026/09/19
+
+### 🐛 Fixed
+- **Bug silencioso en `ZipService.ignore_folders`** — faltaban comas entre strings del set, causando que `build`, `gradle` y `.gradle` nunca se ignoraran.
+- **Edge case en ruta `/api/download/<file_type>`** — si el body del request era inválido o el resultado tenía un tipo inesperado, Flask retornaba `None` (crash 500). Se agregó guard clause y fallback return.
+- **Import inconsistente en `OpenRouterProvider`** — se unificó a import relativo (`from ....config import config`), consistente con el resto del proyecto.
+- **`.env.example` incompleto** — se agregó `OPENROUTER_API_KEY` faltante.
+
+### Changed
+- **`ZipService.ignore_folders` expandido** — se agregan: `bin`, `out`, `target`, `dist`, `logs`, `docs`, `tests`, `vendor`, `composer.lock`, `package-lock.json`, `yarn.lock`.
+- **Refactor del orchestrator** — `DocumentationOrchestrator` extraído a paquete `api/services/orchestrator/` con componentes especializados:
+  - `core.py` — coordinador principal
+  - `parsers.py` — `ZipParser` para extracción y parseo de ZIP
+  - `processors.py` — `ChunkProcessor` y `DocumentationConsolidator`
+  - `metadata.py` — `MetadataBuilder` para generación de metadatos y filenames
+- Version bump a `2.5.1` (API_VERSION en `main.py`).
+
 ## [3.2.1] - 2026/09/17
 
 ### Added

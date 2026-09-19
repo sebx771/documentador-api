@@ -1,5 +1,5 @@
 from openai import OpenAI
-from api.config import config
+from ....config import config
 from .base_provider import BaseAIProvider
 from .structures import ChatCompletionResponse, ChatCompletionChoice, ChatCompletionMessage
 

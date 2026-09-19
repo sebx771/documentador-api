@@ -9,7 +9,7 @@ from .logging_config import setup_logging
 setup_logging()
 logger = logging.getLogger(__name__)
 
-API_VERSION = "2.5.0"
+API_VERSION = "3.2.2"
 app = Flask(__name__)
 CORS(app)
 app.json.sort_keys = False # esto hace que el JSON tenga el mismo orden que las claves de diccionarios

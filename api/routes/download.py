@@ -18,6 +18,12 @@ def download(file_type):
     # Obtener datos del request
     data, extra = get_request.get_request_data(request)
 
+    if data is None:
+        return jsonify({
+            "error": "No se pudo interpretar el cuerpo de la petición. Envíe JSON con 'code' o un archivo.",
+            "codigo_error": "BAD_REQUEST",
+        }), 400
+
     # Extraer código fuente
     if hasattr(data, "read"):
         codigo_fuente = data.read().decode("utf-8")
@@ -41,3 +47,5 @@ def download(file_type):
             as_attachment=True,
             download_name=result["filename"],
         )
+
+    return jsonify({"error": "Unexpected response type"}), 500

@@ -33,10 +33,21 @@ class ZipService:
             "__pycache__",
             ".venv",
             ".idea",
-            ".vscode"
-            "build"
-            "gradle"
-            ".gradle"
+            ".vscode",
+            "build",
+            "gradle",
+            ".gradle",
+            "bin",
+            "out",
+            "target",
+            "dist",
+            "logs",
+            "docs",
+            "tests",
+            "vendor",
+            "composer.lock",
+            "package-lock.json",
+            "yarn.lock"
         }
         self.ignore_files = {"package-lock.json", "yarn.lock"}
 
