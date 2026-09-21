@@ -1,8 +1,8 @@
 models = {
     "chunking": {
-        "provider": "openrouter",
-        "id": "qwen/qwen3.8-27b:free",
-        "tpm": 60000
+        "provider": "groq",
+        "id": "openai/gpt-oss-120b",
+        "tpm": 8000
     },
     "final_doc": {
         "provider": "openrouter",
