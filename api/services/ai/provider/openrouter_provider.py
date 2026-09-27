@@ -10,7 +10,7 @@ class OpenRouterProvider(BaseAIProvider):
     """
 
     def _get_env_api_key(self) -> str | None:
-        return config.openrouter_api_key
+        return config.OPENROUTER_API_KEY
 
     def _initialize_client(self) -> OpenAI:
       
