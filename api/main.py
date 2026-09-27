@@ -13,6 +13,7 @@ API_VERSION = "3.2.2"
 app = Flask(__name__)
 CORS(app)
 app.json.sort_keys = False # esto hace que el JSON tenga el mismo orden que las claves de diccionarios
+app.config["MAX_CONTENT_LENGTH"] = 15 * 1024 * 1024  # 15 MB máximo permitido por petición
 
 
 
@@ -87,6 +88,13 @@ def method_not_allowed(e):
         "error": "Método HTTP no permitido",
         "codigo_error": "METHOD_NOT_ALLOWED"
     }), 405
+
+@app.errorhandler(413)
+def request_entity_too_large(e):
+    return jsonify({
+        "error": "El archivo o contenido excede el tamaño máximo permitido (15 MB)",
+        "codigo_error": "PAYLOAD_TOO_LARGE"
+    }), 413
 
 if __name__ == "__main__":
     app.run(debug=True)
