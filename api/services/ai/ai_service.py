@@ -3,8 +3,9 @@ import time
 import re
 from .prompts import get_prompts, DANGEROUS_WORDS
 from .models import models
-from .provider import GroqProvider, OpenRouterProvider
+from .provider import GroqProvider, OpenRouterProvider, GeminiProvider
 from ..rate_limiter import Ratelimiter
+from ...config import config
 
 
 
@@ -20,13 +21,17 @@ class DocumentadorIA:
 
     def __init__(self):
         self.limiters = {}
-        self.providers = {
-            "groq": GroqProvider(),
-            "openrouter": OpenRouterProvider(),
-        }
+        self.providers = {}
+        if config.GROQ_API_KEY:
+            self.providers["groq"] = GroqProvider()
+        if config.OPENROUTER_API_KEY:
+            self.providers["openrouter"] = OpenRouterProvider()
+        if getattr(config, "GEMINI_API_KEY", None):
+            self.providers["gemini"] = GeminiProvider()
+
         self._model_to_provider = {
-            config["id"]: config.get("provider", "groq")
-            for config in models.values()
+            model_cfg["id"]: model_cfg.get("provider", "groq")
+            for model_cfg in models.values()
         }
         self._init_limiters()
 
@@ -46,7 +51,12 @@ class DocumentadorIA:
 
     def _get_provider_for_model(self, model_id: str):
         provider_name = self._model_to_provider.get(model_id, "groq")
-        return self.providers[provider_name]
+        provider = self.providers.get(provider_name)
+        if not provider:
+            raise ValueError(
+                f"El proveedor '{provider_name}' configurado para el modelo '{model_id}' no está inicializado (falta su API Key en el entorno)."
+            )
+        return provider
 
     def _get_retry_after(self, error: Exception):
         """Extrae el header Retry-After del error de la API si está disponible."""
