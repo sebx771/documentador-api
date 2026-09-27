@@ -5,6 +5,27 @@ Todos los cambios notables en EasyDocs se documenta en este archivo.
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 y este proyecto sigue [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.3.0] - 2026/09/26
+
+### 🔒 Security & Robustness
+- **Rate limiting por IP**:
+  - Activación de `EndpointRateLimiter` con decorador `@rate_limit` y soporte para proxies (`X-Forwarded-For`).
+  - Límite estricto de 10 req/min en endpoints pesados con IA (`/api/download/<file_type>` y `/api/upload-zip`) y 30 req/min en preview para proteger cuotas de Free Tier.
+  - Respuesta HTTP `429 Too Many Requests` con cabeceras estándar `Retry-After`, `X-RateLimit-Limit` y `X-RateLimit-Remaining`.
+- **Protección de memoria contra cargas excesivas (Anti-OOM)**:
+  - Configuración de `MAX_CONTENT_LENGTH = 15MB` en Flask y error handler HTTP 413 con respuesta JSON (`PAYLOAD_TOO_LARGE`).
+- **Validación segura de archivos ZIP**:
+  - Límite de tamaño descomprimido acumulado a 40 MB para evitar ataques de descompresión maliciosa (*ZIP Bombs*).
+  - Límite de cantidad de archivos a máximo 300 por archivo ZIP.
+  - Protección contra *Path Traversal* bloqueando nombres de archivo con rutas relativas peligrosas (`../` o rutas absolutas).
+  - Manejo de `ValueError` en `preview_zip` retornando HTTP 400 (`VALIDATION_ERROR`).
+
+### ✨ Added
+- **Proveedor Google Gemini**:
+  - Integración de `GeminiProvider` usando el SDK `google-genai`.
+  - Soporte de `GEMINI_API_KEY` en `api/config.py`.
+  - Inicialización segura y condicional de proveedores para evitar caídas si faltan claves opcionales.
+
 ## [3.2.2] - 2026/09/19
 
 ### 🐛 Fixed
