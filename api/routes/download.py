@@ -2,6 +2,7 @@ import io
 from flask import Blueprint, request, jsonify, send_file
 from ..utils import get_request
 from ..controllers.download_controller import DownloadController
+from ..services.endpoint_rate_limiter import rate_limit, ai_endpoint_limiter
 
 download_routes = Blueprint("download", __name__)
 controller = DownloadController()
@@ -14,6 +15,7 @@ def download_info():
 
 
 @download_routes.route("/download/<file_type>", methods=["POST"])
+@rate_limit(ai_endpoint_limiter)
 def download(file_type):
     # Obtener datos del request
     data, extra = get_request.get_request_data(request)

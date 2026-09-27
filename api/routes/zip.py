@@ -2,6 +2,7 @@ import io
 from flask import Blueprint, request, jsonify, send_file
 import logging
 from ..controllers.zip_controller import ZipController
+from ..services.endpoint_rate_limiter import rate_limit, ai_endpoint_limiter, light_endpoint_limiter
 
 # Configurar logging
 logger = logging.getLogger(__name__)
@@ -11,6 +12,7 @@ controller = ZipController()
 
 
 @zip_routes.route("/preview-zip", methods=["POST"])
+@rate_limit(light_endpoint_limiter)
 def preview_zip():
     file = request.files.get("file")
     result = controller.preview_zip(file)
@@ -22,6 +24,7 @@ def preview_zip():
 
 
 @zip_routes.route("/upload-zip", methods=["POST"])
+@rate_limit(ai_endpoint_limiter)
 def upload_zip():
     """
     Endpoint para procesar archivos ZIP y generar documentación automática.

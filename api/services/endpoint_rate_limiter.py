@@ -1,7 +1,8 @@
 import time
 import logging
+from functools import wraps
 import redis
-import math
+from flask import request, jsonify
 from ..config import config
 
 logger = logging.getLogger(__name__)
@@ -145,3 +146,44 @@ class EndpointRateLimiter:
                 "remaining": self.limit,
                 "retry_after": 0,
             }
+
+
+def rate_limit(limiter: EndpointRateLimiter):
+    """
+    Decorador para aplicar rate limiting por IP de cliente a rutas Flask.
+    Soporta proxies y balanceadores vía X-Forwarded-For.
+    """
+    def decorator(f):
+        @wraps(f)
+        def wrapper(*args, **kwargs):
+            forwarded = request.headers.get("X-Forwarded-For")
+            if forwarded:
+                client_ip = forwarded.split(",")[0].strip()
+            else:
+                client_ip = request.remote_addr or "127.0.0.1"
+
+            result = limiter.check(client_ip)
+
+            if not result["allowed"]:
+                retry_after = result.get("retry_after", 1)
+                response = jsonify({
+                    "error": "Has alcanzado el límite de solicitudes de la demo. Por favor espera unos segundos.",
+                    "codigo_error": "RATE_LIMIT_EXCEEDED",
+                    "retry_after": retry_after,
+                })
+                response.status_code = 429
+                response.headers["Retry-After"] = str(retry_after)
+                response.headers["X-RateLimit-Limit"] = str(result["limit"])
+                response.headers["X-RateLimit-Remaining"] = str(result["remaining"])
+                return response
+
+            return f(*args, **kwargs)
+        return wrapper
+    return decorator
+
+
+# Limitadores preconfigurados
+# 10 peticiones por minuto por IP para endpoints pesados de IA
+ai_endpoint_limiter = EndpointRateLimiter(limit=10, window=60, key_prefix="elimit:ai")
+# 30 peticiones por minuto por IP para endpoints ligeros (ej. preview de zip)
+light_endpoint_limiter = EndpointRateLimiter(limit=30, window=60, key_prefix="elimit:light")
