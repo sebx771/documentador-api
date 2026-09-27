@@ -52,6 +52,13 @@ class ZipController:
             contenido_bytes = file.read()
             codigo = self.zip_service.listar_contenido_zip(contenido_bytes)
             return {"type": "json", "data": codigo, "status": 200}
+        except ValueError as e:
+            logger.warning(f"Error de validación en preview_zip: {str(e)}")
+            return {
+                "type": "json",
+                "data": {"error": str(e), "codigo_error": "VALIDATION_ERROR"},
+                "status": 400,
+            }
         except Exception as e:
             logger.error(f"Error en preview_zip: {str(e)}")
             return {

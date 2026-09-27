@@ -50,6 +50,39 @@ class ZipService:
             "yarn.lock"
         }
         self.ignore_files = {"package-lock.json", "yarn.lock"}
+        self.MAX_UNCOMPRESSED_SIZE = 40 * 1024 * 1024  # 40 MB máximo descomprimido
+        self.MAX_FILES_COUNT = 300                      # Máximo 300 archivos en el ZIP
+
+    def validar_zip_seguro(self, zip_file: zipfile.ZipFile) -> None:
+        """
+        Valida que el archivo ZIP no represente un riesgo de seguridad
+        (ZIP Bomb, saturación de archivos o Path Traversal).
+        """
+        infolist = zip_file.infolist()
+
+        if len(infolist) > self.MAX_FILES_COUNT:
+            raise ValueError(
+                f"El archivo ZIP contiene demasiados archivos ({len(infolist)}). "
+                f"El máximo permitido es {self.MAX_FILES_COUNT}."
+            )
+
+        total_uncompressed = 0
+        for info in infolist:
+            filename = info.filename
+            # Protección contra Path Traversal
+            normalized = filename.replace("\\", "/")
+            parts = normalized.split("/")
+            if normalized.startswith("/") or ".." in parts:
+                raise ValueError(
+                    f"Ruta de archivo no permitida detectada en el ZIP: '{filename}'"
+                )
+
+            total_uncompressed += info.file_size
+            if total_uncompressed > self.MAX_UNCOMPRESSED_SIZE:
+                max_mb = self.MAX_UNCOMPRESSED_SIZE / (1024 * 1024)
+                raise ValueError(
+                    f"El tamaño total descomprimido excede el límite de seguridad permitido ({max_mb:.0f} MB)."
+                )
 
     def extraer_zip(self, contenido_bytes: bytes):
         MAX_FILES = 50
@@ -58,6 +91,7 @@ class ZipService:
 
         try:
             with zipfile.ZipFile(io.BytesIO(contenido_bytes)) as zip_file:
+                self.validar_zip_seguro(zip_file)
                 for file in zip_file.namelist():
                     _, ext = os.path.splitext(file.lower())
 
@@ -86,9 +120,11 @@ class ZipService:
                                 f"Error al leer el archivo {file}: {str(e)}"
                             )
                             continue
+        except ValueError:
+            raise
         except zipfile.BadZipFile as e:
             logger.error(f"Error al extraer el ZIP: {str(e)}")
-            raise Exception("Archivo ZIP inválido o corrupto")
+            raise ValueError("Archivo ZIP inválido o corrupto")
 
         return "\n".join(codigo_total), codigo_invalido
 
@@ -103,6 +139,7 @@ class ZipService:
         resultado = []
         try:
             with zipfile.ZipFile(io.BytesIO(contenido_bytes)) as zip_file:
+                self.validar_zip_seguro(zip_file)
                 for file in zip_file.namelist():
                     if file.endswith("/"):
                         continue
@@ -125,8 +162,11 @@ class ZipService:
                     }
                     resultado.append(f)
 
+        except ValueError:
+            raise
         except zipfile.BadZipFile as e:
-            raise Exception("Archivo ZIP inválido o corrupto")
+            logger.error(f"Error al listar contenido del ZIP: {str(e)}")
+            raise ValueError("Archivo ZIP inválido o corrupto")
 
         return resultado
 
