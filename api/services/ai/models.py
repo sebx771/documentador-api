@@ -5,9 +5,9 @@ models = {
         "tpm": 8000
     },
     "final_doc": {
-        "provider": "openrouter",
-        "id": "google/gemma-4-31b-it:free",
-        "tpm": 100000
+        "provider": "gemini",
+        "id": "gemini-3.8-flash",
+        "tpm": 250000
     },
     "fallback": {
         "provider": "openrouter",
