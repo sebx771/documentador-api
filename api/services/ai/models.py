@@ -11,7 +11,7 @@ models = {
     },
     "fallback": {
         "provider": "openrouter",
-        "id": "z-ai/glm-5.2:free",
+        "id": "liquid/lfm-2.5-2.6b:free",
         "tpm": 80000
     },
     "emergency": {

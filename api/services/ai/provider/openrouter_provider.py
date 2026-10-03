@@ -50,8 +50,9 @@ class OpenRouterProvider(BaseAIProvider):
         except Exception as e:
             # Propaga la excepción original preservando sus atributos (p. ej. .response
             # con el header Retry-After) para que el orquestador detecte rate limits (429).
-            # El tipo de excepción de OpenAI ya incluye "rate limit"/"429" en su mensaje.
+            # No reconstruimos la excepción para evitar problemas con subclases de APIStatusError.
+            import logging
             if "429" not in str(e).lower() and "rate limit" not in str(e).lower() \
                and "too many requests" not in str(e).lower():
-                raise type(e)(f"Error en OpenRouterProvider ({model}): {e}")
+                logging.error(f"Error en OpenRouterProvider ({model}): {e}")
             raise
