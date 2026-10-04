@@ -175,6 +175,17 @@ class ZipController:
 
         except Exception as e:
             logger.error(f"Error procesando ZIP: {str(e)}", exc_info=True)
+            error_msg = str(e).lower()
+            if "rate limit" in error_msg or "todos los modelos" in error_msg:
+                return {
+                    "type": "json",
+                    "data": {
+                        "error": "El proveedor de Inteligencia Artificial está saturado. Por favor intenta de nuevo en unos segundos.",
+                        "codigo_error": "AI_PROVIDER_BUSY",
+                    },
+                    "status": 429,
+                }
+
             return {
                 "type": "json",
                 "data": {
