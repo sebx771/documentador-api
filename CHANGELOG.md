@@ -5,6 +5,11 @@ Todos los cambios notables en EasyDocs se documenta en este archivo.
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 y este proyecto sigue [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.3.1] - 2026/10/03
+
+### 🐛 Bug Fixes
+- **Manejo de Errores IA**: Los controladores ahora detectan la saturación del proveedor de Inteligencia Artificial devolviendo correctamente un estado HTTP `429 Too Many Requests` (antes devolvía un falso error `500 Internal Server Error`).
+
 ## [3.3.0] - 2026/09/26
 
 ### 🔒 Security & Robustness
