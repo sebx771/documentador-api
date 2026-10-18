@@ -34,6 +34,15 @@ class TestPhase4Integration(unittest.TestCase):
         response = self.client.get("/api/download")
         self.assertEqual(response.status_code, 200)
 
+    def test_cors_allowed_origin(self):
+        """Verifica que el origen del frontend en Vercel esté permitido en CORS."""
+        response = self.client.get("/", headers={"Origin": "https://documentador-front.vercel.app"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.headers.get("Access-Control-Allow-Origin"),
+            "https://documentador-front.vercel.app"
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

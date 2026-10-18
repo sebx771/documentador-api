@@ -11,7 +11,15 @@ logger = logging.getLogger(__name__)
 
 API_VERSION = "3.3.0"
 app = Flask(__name__)
-CORS(app)
+ALLOWED_ORIGINS = [
+    "https://documentador-front.vercel.app",
+    "https://documentador-front.vercel.app/",
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:5173",
+]
+CORS(app, resources={r"/*": {"origins": ALLOWED_ORIGINS}})
 app.json.sort_keys = False # esto hace que el JSON tenga el mismo orden que las claves de diccionarios
 app.config["MAX_CONTENT_LENGTH"] = 15 * 1024 * 1024  # 15 MB máximo permitido por petición
 
