@@ -5,6 +5,11 @@ Todos los cambios notables en EasyDocs se documenta en este archivo.
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 y este proyecto sigue [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.3.2] - 2026/10/18
+
+### 🔒 Security / Configuration
+- **CORS para Frontend**: Se agregó `https://documentador-front.vercel.app` a los orígenes permitidos en la configuración de CORS de la API, habilitando la integración con el cliente desplegado en Vercel y manteniendo compatibilidad con entornos de desarrollo local.
+
 ## [3.3.1] - 2026/10/03
 
 ### 🐛 Bug Fixes
