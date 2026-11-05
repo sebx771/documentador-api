@@ -8,7 +8,7 @@
 
 **EasyDocs** es un asistente de ingeniería de software impulsado por **IA** que automatiza la generación de documentación técnica. Transforma código fuente en documentación profesional en múltiples formatos.
 
-🚀 **IA** con Groq + OpenRouter | 📄 **Formatos**: Markdown, PDF, Word, Multifile `.zip` | 🌍 **Multiidioma** (ES/EN) | ⚡ **Serverless-ready** (Vercel)
+🚀 **IA** con Groq + OpenRouter + Gemini| 📄 **Formatos**: Markdown, PDF, Word, Multifile `.zip` | 🌍 **Multiidioma** (ES/EN) | ⚡ **Serverless-ready** (Vercel)
 
 ---
 
@@ -30,7 +30,7 @@
 |-----------|-----------|
 | **Runtime** | Python 3.12+ |
 | **Framework** | Flask 3.1.3 |
-| **IA/LLM** | Groq API + OpenRouter |
+| **IA/LLM** | Groq API + OpenRouter + Gemini |
 | **Caché** | Redis 7.4.0 |
 | **Exportación** | FPDF, python-docx, markdown-pdf |
 | **Deployment** | Vercel Serverless |
@@ -38,6 +38,36 @@
 ---
 
 ## 🚀 Instalación Rápida
+
+### Con Docker (recomendado) (desarrollo)
+
+```bash
+git clone https://github.com/sebx771/proyecto_py.git
+cd proyecto_py
+cp .env.example .env
+```
+
+Configura `GROQ_API_KEY` (y las demás claves de IA que quieras usar) en `.env`. Luego levanta la API y Redis:
+
+```bash
+docker compose -f docker-compose-dev.yml up --build
+```
+
+La API estará disponible en `http://localhost:5000`. Para detenerla, ejecuta `docker compose -f docker-compose-dev.yml down`.
+
+### Docker (produccion)
+
+```bash
+docker compose -f docker-compose-dev.yml down
+```
+
+El `docker-compose.yml` de producción no levanta Redis y lee `REDIS_URL` desde `.env` o desde las variables del hosting. Para usar Upstash, configura allí su URL `rediss://`.
+
+
+
+### Sin Docker
+
+Si no tienes Docker, instala y levanta Redis por separado y configura `REDIS_URL` en `.env`. Después instala las dependencias y ejecuta la API:
 
 ```bash
 git clone https://github.com/sebx771/proyecto_py.git
@@ -105,30 +135,9 @@ Detalles en [ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ---
 
-## 💻 Desarrollo
 
-```bash
-pip install -r requirements.txt
-python -m flask --app api.main run --reload
-```
+## Estructura principal:
 
-## 🐳 Dockerización
-
-Requiere Docker Desktop y un archivo `.env` con las claves de IA. Para desarrollo, levanta la API y Redis local con:
-
-```bash
-docker compose -f docker-compose-dev.yml up --build
-```
-
-La API estará disponible en `http://localhost:5000`. Para detener los servicios:
-
-```bash
-docker compose -f docker-compose-dev.yml down
-```
-
-El `docker-compose.yml` de producción no levanta Redis y lee `REDIS_URL` desde `.env` o desde las variables del hosting. Para usar Upstash, configura allí su URL `rediss://`.
-
-Estructura principal:
 ```
 api/
 ├── main.py                 # Entrypoint Flask
@@ -148,6 +157,12 @@ api/
 1. Push a GitHub
 2. Importar en Vercel y configurar variables (`GROQ_API_KEY`, `REDIS_URL`, `OPENROUTER_API_KEY`)
 3. Deploy automático
+
+
+## Deployment con Docker
+1 Push a Github
+2 escoger tu Paas con soporte para docker (ej , railway , northflank)
+3 levanta docker y agrega las variables de entorno AI y Redis
 
 ---
 
@@ -177,4 +192,3 @@ MIT
 ## 📞 Soporte
 
 📧 sebascova18@gmail.com | 🐙 [Issues](https://github.com/sebx771/documentador-api/issues)
-
