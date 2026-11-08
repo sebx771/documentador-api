@@ -7,7 +7,7 @@ import io
 from ..export.pdf_gen import EasyDocsPDF
 from ..export.docx_gen import EasyDocsDOCX
 from ..services.zip_services import ZipService
-from ..services.documentation_orchestrator import DocumentationOrchestrator
+from ..services.orchestrator import DocumentationOrchestrator
 from ..services.chunking_service import ChunkingService
 from ..services.cache_service import get_global_cache
 

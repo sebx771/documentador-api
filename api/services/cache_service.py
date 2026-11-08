@@ -7,7 +7,6 @@ import threading
 
 from ..config import config
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -54,7 +53,7 @@ class CacheService:
             decode_responses=True,
             # Evita que una función serverless deje colgada una conexión
             socket_timeout=5,
-            socket_keepalive=True
+            socket_keepalive=True,
         )
         self.client = redis.Redis(connection_pool=pool)
 
@@ -63,12 +62,21 @@ class CacheService:
         self._stats_lock = threading.Lock()
         self._stats = {"hits": 0, "misses": 0, "evictions": 0}
 
+    # Incrementar esta constante cada vez que cambien las plantillas de prompts para invalidar entradas obsoletas de caché.
+    PROMPT_VERSION = "v1"
+
     def generate_hash(
-        self, content: str, doc_type: str, extra_requirements: str = None
+        self,
+        content: str,
+        doc_type: str,
+        extra_requirements: str = None,
+        language: str = None,
     ) -> str:
-        hash_input = f"{content}|{doc_type}"
+        hash_input = f"{self.PROMPT_VERSION}|{content}|{doc_type}"
         if extra_requirements:
             hash_input += f"|{extra_requirements}"
+        if language:
+            hash_input += f"|{language}"
         return hashlib.sha256(hash_input.encode("utf-8")).hexdigest()
 
     def get(self, cache_key: str) -> Optional[Dict[str, Any]]:

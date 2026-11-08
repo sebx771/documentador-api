@@ -1,15 +1,18 @@
 import zipfile
-from ..export.docx_gen import EasyDocsDOCX
 import io
 import os
-import time
 import logging
 
 logger = logging.getLogger(__name__)
 
 
 class ZipService:
-    def __init__(self):
+    # Cantidad máxima de archivos *elegibles* extraídos para documentación.
+    # El límite estricto de seguridad (MAX_FILES_COUNT) se valida por separado en validar_zip_seguro.
+    DEFAULT_MAX_ELIGIBLE_FILES = 50
+
+    def __init__(self, max_eligible_files: int = None):
+        self.max_eligible_files = max_eligible_files or self.DEFAULT_MAX_ELIGIBLE_FILES
         self.allowed_extensions = {
             ".py",
             ".java",
@@ -23,7 +26,7 @@ class ZipService:
             ".xml",
             ".yml",
             ".yaml",
-            ".kt"
+            ".kt",
         }
         self.ignore_folders = {
             "node_modules",
@@ -47,11 +50,11 @@ class ZipService:
             "vendor",
             "composer.lock",
             "package-lock.json",
-            "yarn.lock"
+            "yarn.lock",
         }
         self.ignore_files = {"package-lock.json", "yarn.lock"}
         self.MAX_UNCOMPRESSED_SIZE = 40 * 1024 * 1024  # 40 MB máximo descomprimido
-        self.MAX_FILES_COUNT = 300                      # Máximo 300 archivos en el ZIP
+        self.MAX_FILES_COUNT = 300  # Máximo 300 archivos en el ZIP
 
     def validar_zip_seguro(self, zip_file: zipfile.ZipFile) -> None:
         """
@@ -84,8 +87,24 @@ class ZipService:
                     f"El tamaño total descomprimido excede el límite de seguridad permitido ({max_mb:.0f} MB)."
                 )
 
+    def _is_ignored_path(self, file: str) -> bool:
+        path_parts = file.replace("\\", "/").split("/")
+        filename = path_parts[-1]
+        return any(part in self.ignore_folders for part in path_parts) or (
+            filename in self.ignore_files
+        )
+
     def extraer_zip(self, contenido_bytes: bytes):
-        MAX_FILES = 50
+        """Extrae archivos fuente elegibles a partir de *contenido_bytes*.
+
+        Returns:
+            Una tupla ``(archivos, archivos_invalidos)`` donde *archivos* es una lista
+            de diccionarios con claves ``filename``, ``language`` y ``content``, y
+            *archivos_invalidos* es una lista de mensajes de error legibles.
+
+        Raises:
+            ValueError: Ante bombas ZIP, intentos de path traversal o archivos corruptos.
+        """
         codigo_total = []
         codigo_invalido = []
 
@@ -98,10 +117,7 @@ class ZipService:
                     if file.endswith("/"):
                         continue
 
-                    if any(folder in file for folder in self.ignore_folders):
-                        continue
-
-                    if any(file.endswith(ignore) for ignore in self.ignore_files):
+                    if self._is_ignored_path(file):
                         continue
 
                     if ext in self.allowed_extensions:
@@ -110,10 +126,14 @@ class ZipService:
                                 contenido = f.read().decode("utf-8", errors="ignore")
                                 if contenido.strip():
                                     codigo_total.append(
-                                        f"\n\n### Archivo:{file}\nLenguaje: {ext.replace('.', '')}\n\n{contenido}"
+                                        {
+                                            "filename": file,
+                                            "language": ext.replace(".", ""),
+                                            "content": contenido.strip(),
+                                        }
                                     )
 
-                                    if len(codigo_total) >= MAX_FILES:
+                                    if len(codigo_total) >= self.max_eligible_files:
                                         break
                         except Exception as e:
                             codigo_invalido.append(
@@ -126,11 +146,11 @@ class ZipService:
             logger.error(f"Error al extraer el ZIP: {str(e)}")
             raise ValueError("Archivo ZIP inválido o corrupto")
 
-        return "\n".join(codigo_total), codigo_invalido
+        return codigo_total, codigo_invalido
 
     def crear_zip(self, files: dict) -> bytes:
         buffer = io.BytesIO()
-        with zipfile.ZipFile(buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
+        with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as zf:
             for filename, content in files.items():
                 zf.writestr(filename, content)
         return buffer.getvalue()
@@ -144,10 +164,7 @@ class ZipService:
                     if file.endswith("/"):
                         continue
 
-                    if any(folder in file for folder in self.ignore_folders):
-                        continue
-
-                    if any(file.endswith(ignore) for ignore in self.ignore_files):
+                    if self._is_ignored_path(file):
                         continue
 
                     _, ext = os.path.splitext(file.lower())
@@ -169,4 +186,3 @@ class ZipService:
             raise ValueError("Archivo ZIP inválido o corrupto")
 
         return resultado
-

@@ -21,7 +21,7 @@ def test_zip_processing():
     print("\n[2] Extrayendo archivos con ZipService...")
     zs = ZipService()
     raw_code, invalid_files = zs.extraer_zip(zip_content)
-    print(f"    Código extraído: {len(raw_code):,} caracteres")
+    print(f"    Archivos extraídos: {len(raw_code)}")
     print(f"    Archivos inválidos: {len(invalid_files)}")
     
     print("\n[3] Procesando con DocumentationOrchestrator...")
