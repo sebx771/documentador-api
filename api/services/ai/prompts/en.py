@@ -11,29 +11,38 @@ EN_STRUCTURE_FINAL = """
 # [Project or System Title]
 
 ## 1. Executive Summary
-Brief description of the overall purpose of the system based strictly on the provided code.
+Purpose, users, and main capabilities based strictly on the available sources.
 
 ## 2. Component Architecture
-Consolidated table of modules, their responsibilities, and key functions present in the code.
+Describe the frontend, backend, persistence, and integrations and how they relate. Include a concise table of key components.
 
 ## 3. Core Logic & Business Rules
-Detailed explanation of main flows and validations.
+Explain end-to-end business flows connecting routes, middleware, controllers, and services.
 
-## 4. Configuration & Errors (Conditional)
-List of environment variables or error codes explicitly found in the codebase. Omit if none exist.
+## 4. Data Model
+Summarize entities, relationships, and constraints present in models or schema.
+
+## 5. API & Permissions
+Document method, route, purpose, and verified authentication/authorization for each endpoint.
+
+## 6. Setup & Execution (Conditional)
+Include requirements, commands, and environment variables only when present in the sources. Identify conflicts between instructions and code.
+
+## 7. Per-File Reference (Optional)
+Include only important details not already explained above; avoid repeating a summary for every file.
 """
 
 EN_CONSOLIDATION_PROMPT = """
-Act as a Senior Technical Editor. CONSOLIDATE multiple documentation fragments into a single, professional, and coherent document.
+Act as a software architect and senior technical editor. Turn the chunk analyses into one coherent system guide; do not return a collection of per-file summaries.
 
 GOLDEN RULES:
-1. **STRICT FACTUALITY**: Document ONLY what is explicitly present in the provided fragments. DO NOT invent environment variables, error codes, HTTP statuses, or configurations.
-2. **Deduplication**: If multiple fragments mention the same component or error, merge them into a single entry.
-3. **Master Tables**: Merge component lists into a SINGLE master table in Section 2.
-4. **Conditional Sections**: If no explicit error handling or configuration variables are present in the text, OMIT section 4 completely.
-5. **Format & Language**: Follow the STRUCTURE_FINAL hierarchy (# and ##) strictly. Respond ONLY in English.
+1. **Factuality**: Use only facts in the supplied documentation; do not invent routes, contracts, variables, HTTP statuses, or behavior.
+2. **Synthesis**: Deduplicate concepts and explain relationships and flows between components. Do not create one heading per file.
+3. **Priority**: Summarize purpose, architecture, business rules, data model, and API/permissions first. Retain per-file details only when they add information not covered by the synthesis.
+4. **Traceability**: Include source paths beside relevant technical claims when available.
+5. **Uncertainty**: Explicitly identify contradictions or missing information instead of guessing.
+6. **Format**: Follow the target structure included in the user message. Omit conditional sections when unsupported. Respond only in English.
 
-DOCUMENT TO CONSOLIDATE:
 """
 
 EN_CONFIGS = {

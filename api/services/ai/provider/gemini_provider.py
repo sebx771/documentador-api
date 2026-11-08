@@ -2,7 +2,11 @@ from google import genai
 from google.genai import types
 from ....config import config
 from .base_provider import BaseAIProvider
-from .structures import ChatCompletionResponse, ChatCompletionChoice, ChatCompletionMessage
+from .structures import (
+    ChatCompletionResponse,
+    ChatCompletionChoice,
+    ChatCompletionMessage,
+)
 
 
 class GeminiProvider(BaseAIProvider):
@@ -64,20 +68,28 @@ class GeminiProvider(BaseAIProvider):
 
             text = response.text
             if not text:
-                raise ValueError("Respuesta vacía o bloqueada por políticas de seguridad de Gemini")
+                raise ValueError(
+                    "Respuesta vacía o bloqueada por políticas de seguridad de Gemini"
+                )
 
             return ChatCompletionResponse(
                 choices=[
-                    ChatCompletionChoice(
-                        message=ChatCompletionMessage(content=text)
-                    )
+                    ChatCompletionChoice(message=ChatCompletionMessage(content=text))
                 ]
             )
 
         except Exception as e:
             error_str = str(e).lower()
             # Detecta errores 429 / cuotas de rate limit para re-lanzarlos intactos
-            if any(term in error_str for term in ["429", "rate limit", "too many requests", "resource_exhausted"]):
+            if any(
+                term in error_str
+                for term in [
+                    "429",
+                    "rate limit",
+                    "too many requests",
+                    "resource_exhausted",
+                ]
+            ):
                 raise
 
             # Lanza una excepción genérica preservando el traceback original

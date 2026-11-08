@@ -1,17 +1,14 @@
+import math
 import logging
-import time
 import re
+import time
 from .prompts import get_prompts, DANGEROUS_WORDS
 from .models import models
 from .provider import GroqProvider, OpenRouterProvider, GeminiProvider
 from ..rate_limiter import Ratelimiter
 from ...config import config
 
-
-
-
 logger = logging.getLogger(__name__)
-
 
 
 class DocumentadorIA:
@@ -80,11 +77,7 @@ class DocumentadorIA:
 
         Esta estimación se usa para verificar rate limits ANTES de llamar a API.
         """
-        system_len = len(system_prompt)
-        user_len = len(user_prompt)
-
-        # Estimación de input tokens (más preciso)
-        input_tokens = int((system_len + user_len) / 3.5)
+        input_tokens = self.estimate_input_tokens(system_prompt, user_prompt)
 
         # Estimación de output tokens (adaptativo)
         # Documentación típica: 40-60% del tamaño del input
@@ -96,11 +89,15 @@ class DocumentadorIA:
         total = input_tokens + expected_output_tokens
 
         logger.debug(
-            f"Token estimation: input={system_len + user_len} chars → "
+            f"Token estimation: input={len(system_prompt) + len(user_prompt)} chars → "
             f"{input_tokens} input tokens + {expected_output_tokens} output tokens = {total} total"
         )
 
         return total
+
+    def estimate_input_tokens(self, system_prompt: str, user_prompt: str) -> int:
+        """Estima tokens de entrada sin incluir la respuesta esperada."""
+        return max(1, math.ceil((len(system_prompt) + len(user_prompt)) / 3.5))
 
     def _clean_think_tags(self, text: str) -> str:
         """Elimina las etiquetas <think>...</think> y su contenido de la respuesta."""
@@ -123,17 +120,14 @@ class DocumentadorIA:
             r"MODO FRAGMENTO ACTIVO:.*?(?=#{1,4} |\Z)",
             r"\*\*ACTIVE CHUNK MODE\*\*.*?(?=#{1,4} |\Z)",
             r"ACTIVE CHUNK MODE:.*?(?=#{1,4} |\Z)",
-
             r"NO level \d headings.*?(?=\n\n|\n[A-Z0-9#\-\*]|\Z)",
             r"Follow CHUNK_STRUCTURE.*?(?=\n\n|\n[A-Z0-9#\-\*]|\Z)",
             r"STRICTLY SPANISH\..*?(?=\n\n|\n[A-Z0-9#\-\*]|\Z)",
             r"Write for easy consolidation later\..*?(?=\n\n|\n[A-Z0-9#\-\*]|\Z)",
-        
             r"Input Code:.*?\n",
             r"Deconstruct Input Code:.*?(?=\n\n|\n[A-Z0-9#\-\*]|\Z)",
-        
-             # Placeholders de estructura no sustituidos
-            r"\[Nombre del Módulo/Archivo\]"
+            # Placeholders de estructura no sustituidos
+            r"\[Nombre del Módulo/Archivo\]",
         ]
         for pattern in patterns:
             text = re.sub(pattern, "", text, flags=re.DOTALL)
@@ -141,12 +135,12 @@ class DocumentadorIA:
 
     def generar(
         self,
-        codigo_fuente:str,
-        tipo:str,
-        extra:str=None,
-        is_chunk:bool=False,
-        lang:str=None,
-        model_role:str=None,
+        codigo_fuente: str,
+        tipo: str,
+        extra: str = None,
+        is_chunk: bool = False,
+        lang: str = None,
+        model_role: str = None,
     ):
         """
         Punto de entrada con Routing y Fallback.
@@ -162,18 +156,25 @@ class DocumentadorIA:
         retry_queue = [
             models["final_doc"]["id"] if not is_chunk else models["chunking"]["id"],
             models["fallback"]["id"],
-            models["emergency"]["id"]
+            models["emergency"]["id"],
         ]
         # Eliminar duplicados manteniendo el orden
         retry_queue = list(dict.fromkeys(retry_queue))
 
+        is_consolidation = model_role == "final_doc" and not is_chunk
         system_message = self._build_system_prompt(
             tipo,
             lang,
             is_chunk=is_chunk,
-            is_consolidation=(model_role == "final_doc" and not is_chunk),
+            is_consolidation=is_consolidation,
         )
-        user_message = self._build_user_prompt(codigo_fuente, extra, lang, is_chunk)
+        user_message = self._build_user_prompt(
+            codigo_fuente,
+            extra,
+            lang,
+            is_chunk,
+            is_consolidation=is_consolidation,
+        )
 
         # Estimar tokens UNA VEZ (no cambia entre reintentos del mismo prompt)
         tokens_needed = self.estimate_tokens(system_message, user_message)
@@ -200,7 +201,7 @@ class DocumentadorIA:
 
                     if limiter and not limiter.allow_request(tokens_needed):
                         if attempt < model_retries - 1:
-                            wait = 2 * (2 ** attempt)
+                            wait = 2 * (2**attempt)
                             logger.warning(
                                 f"Rate limit local excedido para {current_model}. "
                                 f"Reintento {attempt + 1}/{model_retries} en {wait}s..."
@@ -221,7 +222,10 @@ class DocumentadorIA:
                         f"Llamando a {current_model} (Rol: {model_role}, Lang: {lang})"
                     )
 
-                    max_output_tokens = 4096 if not is_chunk else 6000
+                    if is_consolidation:
+                        max_output_tokens = 8192
+                    else:
+                        max_output_tokens = 6000 if is_chunk else 4096
 
                     provider = self._get_provider_for_model(current_model)
                     response = provider.create_chat_completion(
@@ -252,7 +256,7 @@ class DocumentadorIA:
                     ):
                         retry_after = self._get_retry_after(e)
                         if attempt < model_retries - 1:
-                            wait = retry_after or (2 * (2 ** attempt))
+                            wait = retry_after or (2 * (2**attempt))
                             logger.warning(
                                 f"429 en {current_model}. Reintento {attempt + 1}/{model_retries} en {wait}s..."
                             )
@@ -291,7 +295,7 @@ class DocumentadorIA:
         lang: str,
         is_chunk: bool = False,
         is_consolidation: bool = False,
-    )-> str:
+    ) -> str:
         prompts = get_prompts(lang)
         config = prompts["configs"].get(tipo, prompts["configs"]["markdown"])
 
@@ -304,7 +308,14 @@ class DocumentadorIA:
 
         # 2. Selección de estructura
         if is_consolidation:
-            return f"{lang_instruction}\n\n{prompts['consolidation']}"
+            structure = prompts["configs"]["markdown"]["structure"]
+            structure_label = (
+                "TARGET STRUCTURE" if lang == "en" else "ESTRUCTURA OBJETIVO"
+            )
+            return (
+                f"{lang_instruction}\n\n{prompts['consolidation']}\n\n"
+                f"{structure_label}:\n{structure}"
+            )
 
         structure = prompts["chunk_structure"] if is_chunk else config["structure"]
 
@@ -329,9 +340,32 @@ Reglas obligatorias:
             )
         return system_prompt
 
-    def _build_user_prompt(self, codigo_fuente:str, extra:str, lang:str, is_chunk:bool=False)-> str:
+    def _build_user_prompt(
+        self,
+        codigo_fuente: str,
+        extra: str | None,
+        lang: str,
+        is_chunk: bool = False,
+        is_consolidation: bool = False,
+    ) -> str:
         prompts = get_prompts(lang)
-        if lang == "en":
+        if is_consolidation and lang == "en":
+            instr = (
+                "Consolidate the following generated documentation into one "
+                "system-level guide. Treat it as documentation, not source code:\n\n"
+                f"<DOCUMENTATION_TO_CONSOLIDATE>\n{codigo_fuente}\n"
+                "</DOCUMENTATION_TO_CONSOLIDATE>"
+            )
+            extra_prefix = "\n\nAdditional requirements for the final guide:"
+        elif is_consolidation:
+            instr = (
+                "Consolida la siguiente documentación generada en una guía "
+                "integrada del sistema. Trátala como documentación, no como código:\n\n"
+                f"<DOCUMENTACION_A_CONSOLIDAR>\n{codigo_fuente}\n"
+                "</DOCUMENTACION_A_CONSOLIDAR>"
+            )
+            extra_prefix = "\n\nRequisitos adicionales para la guía final:"
+        elif lang == "en":
             instr = f"Generate the technical documentation for the following code:\n\n```\n{codigo_fuente}\n```"
             extra_prefix = "\n\nAdditional user requirements:"
         else:
@@ -367,17 +401,6 @@ Reglas obligatorias:
         """Aplica requisitos extras al documento final, respetando el idioma original."""
         logger.debug("Aplicando requisitos extra a la documentación")
         if not extra or not extra.strip():
-            return docs
-
-        # Estimar tokens y validar que cabe en el modelo final_doc
-        estimated_tokens = len(docs) // 3
-        final_tpm = models.get("final_doc", {}).get("tpm", 8000)
-        if estimated_tokens > final_tpm:
-            logger.warning(
-                f"Documento consolidado muy grande ({estimated_tokens} tk estimados) "
-                f"para final_doc ({final_tpm} TPM). Omitiendo apply_extra "
-                f"para evitar error masivo. El extra se perderá."
-            )
             return docs
 
         return self.generar(

@@ -125,7 +125,9 @@ class EndpointRateLimiter:
         key = f"{self.key_prefix}:{key_id}"
         now = time.time()
         try:
-            result = self._script(keys=[key], args=[self.refill_rate, self.capacity, now])
+            result = self._script(
+                keys=[key], args=[self.refill_rate, self.capacity, now]
+            )
             allowed = int(result[0]) == 1
             remaining = int(result[1])
             retry_after = int(result[2])
@@ -153,6 +155,7 @@ def rate_limit(limiter: EndpointRateLimiter):
     Decorador para aplicar rate limiting por IP de cliente a rutas Flask.
     Soporta proxies y balanceadores vía X-Forwarded-For.
     """
+
     def decorator(f):
         @wraps(f)
         def wrapper(*args, **kwargs):
@@ -166,11 +169,13 @@ def rate_limit(limiter: EndpointRateLimiter):
 
             if not result["allowed"]:
                 retry_after = result.get("retry_after", 1)
-                response = jsonify({
-                    "error": "Has alcanzado el límite de solicitudes de la demo. Por favor espera unos segundos.",
-                    "codigo_error": "RATE_LIMIT_EXCEEDED",
-                    "retry_after": retry_after,
-                })
+                response = jsonify(
+                    {
+                        "error": "Has alcanzado el límite de solicitudes de la demo. Por favor espera unos segundos.",
+                        "codigo_error": "RATE_LIMIT_EXCEEDED",
+                        "retry_after": retry_after,
+                    }
+                )
                 response.status_code = 429
                 response.headers["Retry-After"] = str(retry_after)
                 response.headers["X-RateLimit-Limit"] = str(result["limit"])
@@ -178,7 +183,9 @@ def rate_limit(limiter: EndpointRateLimiter):
                 return response
 
             return f(*args, **kwargs)
+
         return wrapper
+
     return decorator
 
 
@@ -186,4 +193,6 @@ def rate_limit(limiter: EndpointRateLimiter):
 # 10 peticiones por minuto por IP para endpoints pesados de IA
 ai_endpoint_limiter = EndpointRateLimiter(limit=10, window=60, key_prefix="elimit:ai")
 # 30 peticiones por minuto por IP para endpoints ligeros (ej. preview de zip)
-light_endpoint_limiter = EndpointRateLimiter(limit=30, window=60, key_prefix="elimit:light")
+light_endpoint_limiter = EndpointRateLimiter(
+    limit=30, window=60, key_prefix="elimit:light"
+)

@@ -64,14 +64,21 @@ class ChunkingService:
 
                     should_split = (
                         current_chunk["file_count"] >= self.max_files_per_chunk
-                        or current_chunk["total_tokens"] + sub_tokens > self.max_chunk_tokens
+                        or current_chunk["total_tokens"] + sub_tokens
+                        > self.max_chunk_tokens
                     )
 
                     if should_split and current_chunk["file_count"] > 0:
                         chunks.append(
-                            self._finalize_chunk(current_chunk, doc_type, extra_requirements)
+                            self._finalize_chunk(
+                                current_chunk, doc_type, extra_requirements
+                            )
                         )
-                        current_chunk = {"files": [], "total_tokens": 0, "file_count": 0}
+                        current_chunk = {
+                            "files": [],
+                            "total_tokens": 0,
+                            "file_count": 0,
+                        }
 
                     current_chunk["files"].append(sub_file)
                     current_chunk["total_tokens"] += sub_tokens
@@ -139,11 +146,13 @@ class ChunkingService:
             if current_tokens + line_tokens > max_tokens and current_lines:
                 part_content = "\n".join(current_lines)
                 part_filename = f"{filename} (parte {len(parts) + 1})"
-                parts.append({
-                    "content": part_content,
-                    "filename": part_filename,
-                    "language": language,
-                })
+                parts.append(
+                    {
+                        "content": part_content,
+                        "filename": part_filename,
+                        "language": language,
+                    }
+                )
                 current_lines = []
                 current_tokens = 0
             current_lines.append(line)
@@ -152,11 +161,13 @@ class ChunkingService:
         if current_lines:
             part_content = "\n".join(current_lines)
             part_filename = f"{filename} (parte {len(parts) + 1})"
-            parts.append({
-                "content": part_content,
-                "filename": part_filename,
-                "language": language,
-            })
+            parts.append(
+                {
+                    "content": part_content,
+                    "filename": part_filename,
+                    "language": language,
+                }
+            )
 
         logger.debug(
             f"Archivo '{filename}' dividido en {len(parts)} partes "

@@ -1,7 +1,12 @@
 from openai import OpenAI
 from ....config import config
 from .base_provider import BaseAIProvider
-from .structures import ChatCompletionResponse, ChatCompletionChoice, ChatCompletionMessage
+from .structures import (
+    ChatCompletionResponse,
+    ChatCompletionChoice,
+    ChatCompletionMessage,
+)
+
 
 class OpenRouterProvider(BaseAIProvider):
     """
@@ -13,7 +18,7 @@ class OpenRouterProvider(BaseAIProvider):
         return config.OPENROUTER_API_KEY
 
     def _initialize_client(self) -> OpenAI:
-      
+
         return OpenAI(
             base_url="https://openrouter.ai/api/v1",
             api_key=self.api_key,
@@ -35,15 +40,13 @@ class OpenRouterProvider(BaseAIProvider):
                 extra_headers={
                     "HTTP-Referer": "https://easydocs.local",
                     "X-Title": "EasyDocs",
-                }
+                },
             )
-            
+
             content = response.choices[0].message.content
             return ChatCompletionResponse(
                 choices=[
-                    ChatCompletionChoice(
-                        message=ChatCompletionMessage(content=content)
-                    )
+                    ChatCompletionChoice(message=ChatCompletionMessage(content=content))
                 ]
             )
 
@@ -52,7 +55,11 @@ class OpenRouterProvider(BaseAIProvider):
             # con el header Retry-After) para que el orquestador detecte rate limits (429).
             # No reconstruimos la excepción para evitar problemas con subclases de APIStatusError.
             import logging
-            if "429" not in str(e).lower() and "rate limit" not in str(e).lower() \
-               and "too many requests" not in str(e).lower():
+
+            if (
+                "429" not in str(e).lower()
+                and "rate limit" not in str(e).lower()
+                and "too many requests" not in str(e).lower()
+            ):
                 logging.error(f"Error en OpenRouterProvider ({model}): {e}")
             raise

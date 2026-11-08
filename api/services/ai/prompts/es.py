@@ -11,29 +11,38 @@ ES_STRUCTURE_FINAL = """
 # [Título del Proyecto o Sistema]
 
 ## 1. Resumen Ejecutivo
-Breve descripción del propósito global del sistema basada estrictamente en el código analizado.
+Propósito, usuarios y capacidades principales del sistema, basados estrictamente en las fuentes.
 
 ## 2. Arquitectura de Componentes
-Tabla consolidada de módulos, responsabilidades y funciones clave presentes en el código.
+Describe frontend, backend, persistencia e integraciones y cómo se relacionan. Incluye una tabla breve de componentes principales.
 
 ## 3. Lógica Central y Reglas de Negocio
-Explicación detallada de los flujos principales y validaciones.
+Explica los flujos completos de negocio conectando rutas, middleware, controladores y servicios.
 
-## 4. Configuración y Errores (Condicional)
-Lista de variables de entorno o códigos de error presentes explícitamente en el código. Omitir si no existen.
+## 4. Modelo de Datos
+Resume las entidades, relaciones y restricciones que consten en los modelos o el esquema.
+
+## 5. API y Permisos
+Documenta método, ruta, propósito y autenticación/autorización para cada endpoint verificado.
+
+## 6. Configuración y Ejecución (Condicional)
+Incluye requisitos, comandos y variables solo cuando estén presentes en las fuentes. Indica inconsistencias entre instrucciones y código.
+
+## 7. Referencia por Archivo (Opcional)
+Incluye únicamente detalles importantes que no estén explicados en las secciones anteriores; evita repetir un resumen para cada archivo.
 """
 
 ES_CONSOLIDATION_PROMPT = """
-Actúa como un Editor Técnico Senior. Tu tarea es CONSOLIDAR múltiples fragmentos de documentación en un único documento profesional y coherente.
+Actúa como arquitecto de software y editor técnico senior. Transforma los análisis de fragmentos en una guía del sistema coherente; no entregues una colección de resúmenes archivo por archivo.
 
 REGLAS DE ORO:
-1. **FACTICIDAD ESTRICTA**: Documenta ÚNICAMENTE lo que esté explícitamente presente en los fragmentos. NO inventes variables de entorno, códigos de error, estados HTTP ni configuraciones.
-2. **Deduplicación**: Si varios fragmentos mencionan el mismo componente, únelos en una sola entrada.
-3. **Tablas Maestras**: Fusiona todas las tablas de componentes en una SOLA tabla maestra en la Sección 2.
-4. **Secciones Condicionales**: Si no hay manejo explícito de errores o variables en el texto, OMITE la sección 4 por completo.
-5. **Formato e Idioma**: Sigue estrictamente la estructura (títulos # y ##) de ES_STRUCTURE_FINAL. Responde ÚNICAMENTE en Español.
+1. **Factualidad**: usa únicamente hechos presentes en la documentación recibida; no inventes rutas, contratos, variables, estados HTTP ni comportamientos.
+2. **Síntesis**: deduplica conceptos y explica relaciones y flujos entre componentes. No uses un encabezado por cada archivo.
+3. **Prioridad**: resume primero propósito, arquitectura, reglas de negocio, modelo de datos y API/permisos. Conserva detalles por archivo solo si aportan información que no aparezca en la síntesis.
+4. **Trazabilidad**: menciona rutas de archivo junto a afirmaciones técnicas relevantes cuando estén disponibles.
+5. **Incertidumbre**: si las fuentes se contradicen o falta información, indícalo explícitamente en vez de resolverlo por suposición.
+6. **Formato**: sigue la estructura objetivo incluida en el mensaje. Omite las secciones condicionales cuando no haya evidencia. Responde únicamente en español.
 
-DOCUMENTO A CONSOLIDAR:
 """
 
 ES_CONFIGS = {
