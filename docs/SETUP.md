@@ -1,11 +1,16 @@
 # 🛠️ Guía de Instalación Detallada
 
+Español | [English](SETUP.en.md)
+
 ## Requisitos Previos
 
 - **Python 3.12+** ([descargar](https://www.python.org/downloads/))
 - **Git** ([descargar](https://git-scm.com/))
-- **Redis** (local o en la nube)
-- **Groq API Key** ([obtener gratis](https://console.groq.com/))
+- **Redis** (local, en Docker o en la nube como Upstash)
+- **Al menos una clave de proveedor IA:**
+  - `GROQ_API_KEY` ([console.groq.com](https://console.groq.com/))
+  - `OPENROUTER_API_KEY` ([openrouter.ai](https://openrouter.ai/))
+  - `GEMINI_API_KEY` ([aistudio.google.com](https://aistudio.google.com/))
 
 ---
 
@@ -48,11 +53,11 @@ pip install -r requirements.txt
 asegurate que el interprete de python que usa el entorno virtual sea el correcto.
 
 **Dependencias principales:**
-- Flask 3.1.3 - Framework web
-- Groq 1.1.2 - SDK Groq
-- Redis 7.4.0 - Cliente Redis
-- python-docx 1.1.2 - Exportación Word
-- FPDF - Exportación PDF
+- `Flask` 3.1.3 — Framework web
+- `groq` 1.1.2, `openai` 3.7.0 (OpenRouter), `google-genai` 2.24.0 (Gemini) — SDKs de proveedores IA
+- `redis` 7.4.0 — Cliente Redis (caché y rate limiting)
+- `markdown-pdf` 1.13.1 — Exportación PDF
+- `python-docx` — Exportación Word (`.docx`)
 
 ### Paso 5: Configurar Variables de Entorno
 
@@ -74,25 +79,20 @@ cp .env.example .env
 
 #### Editar `.env`
 
-```env
-# ==========================================
-# GROQ API CONFIGURATION
-# ==========================================
-GROQ_API_KEY=sk_xxxxxxxxxxxxxxxxxxxxx
+Usa [`.env.example`](../.env.example) como referencia. El arranque (`api/config.py`) exige **al menos una** clave de proveedor IA (`GROQ_API_KEY`, `OPENROUTER_API_KEY` o `GEMINI_API_KEY`) más `REDIS_URL`:
 
-# ==========================================
-# REDIS CONFIGURATION  
-# ==========================================
-REDIS_URL=redis://localhost:6379
+```env
+GROQ_API_KEY="api_key_aqui"
+OPENROUTER_API_KEY="api_key_aqui"
+GEMINI_API_KEY="api_key_aqui"
+REDIS_URL="redis://localhost:6379/0"
+DEBUG="false"
 ```
 
-**Cómo obtener `GROQ_API_KEY`:**
-
-1. Ir a [console.groq.com](https://console.groq.com)
-2. Crear cuenta (gratis)
-3. Ir a API Keys
-4. Crear nueva clave
-5. Copiar la clave a `.env`
+**Dónde obtener las claves de IA:**
+- **Groq:** [console.groq.com](https://console.groq.com)
+- **OpenRouter:** [openrouter.ai](https://openrouter.ai)
+- **Google Gemini:** [aistudio.google.com](https://aistudio.google.com)
 
 **Cómo obtener `REDIS_URL`:**
 
@@ -111,7 +111,7 @@ redis-cli ping
 # Deberías ver: PONG
 
 # Usar en .env:
-REDIS_URL=redis://localhost:6379
+REDIS_URL=redis://localhost:6379/0
 ```
 
 **Opción 2: Redis en la Nube (Recomendado para producción)**
@@ -166,7 +166,17 @@ La API quedará disponible en `http://localhost:5000`. Para detener los contened
 docker compose -f docker-compose-dev.yml down
 ```
 
-El `docker-compose-dev.yml` utiliza Redis local. Para producción, `docker-compose.yml` levanta solo la API y lee `REDIS_URL` desde `.env` o desde las variables del hosting. Configura allí la URL `rediss://` de Upstash; no necesitas levantar un servicio Redis adicional.
+El `docker-compose-dev.yml` levanta la API junto con Redis local para desarrollo. Para producción, `docker-compose.yml` levanta únicamente la API (con Gunicorn en el puerto `5000`) y lee `REDIS_URL` desde `.env` o desde las variables del hosting (por ejemplo, una URL `rediss://` de Upstash):
+
+```powershell
+docker compose -f docker-compose.yml up -d --build
+```
+
+Para detener el stack de producción:
+
+```powershell
+docker compose -f docker-compose.yml down
+```
 
 ---
 
@@ -177,8 +187,14 @@ El `docker-compose-dev.yml` utiliza Redis local. Para producción, `docker-compo
 ```bash
 pip install -r requirements.txt
 ```
-## tests
-de momento no se usa pytest , las pruebas son debugs manuales 
+
+### Ejecutar Tests
+
+La suite de pruebas unitarias y de integración está en `test/`:
+
+```bash
+python test/run_tests.py
+```
 
 ### Configurar pre-commit hooks (opcional)
 
@@ -209,11 +225,11 @@ black api/
 
 ### Pasos
 
+> **Nota sobre límites serverless:** Vercel impone un límite de cuerpo HTTP de ~4.5 MB y timeouts de ejecución por función. Para cargas ZIP de hasta `15 MB` o consolidaciones multirronda largas, usa despliegue con Docker PaaS (`Dockerfile` o `docker-compose.yml`).
+
 #### 1. Push del Código a GitHub
 
 ```bash
-git add .
-git commit -m "Setup final: documentación y CI/CD"
 git push origin main
 ```
 
@@ -222,16 +238,19 @@ git push origin main
 1. Ir a [vercel.com](https://vercel.com)
 2. Click en "New Project"
 3. Conectar GitHub repository
-4. Seleccionar `proyecto_py`
+4. Seleccionar `documentador-api`
 5. Click "Import"
 
 #### 3. Configurar Variables de Entorno
 
-En Vercel Dashboard → Settings → Environment Variables:
+En Vercel Dashboard → Settings → Environment Variables, configura `REDIS_URL` (ej. Upstash `rediss://...`) y las claves de IA que uses (`GROQ_API_KEY`, `OPENROUTER_API_KEY`, `GEMINI_API_KEY`):
 
-```
-GROQ_API_KEY = sk_xxxxxxxxxxxxxxxxxxxxx
-REDIS_URL = redis://...
+```env
+GROQ_API_KEY=tu_clave_groq
+OPENROUTER_API_KEY=tu_clave_openrouter
+GEMINI_API_KEY=tu_clave_gemini
+REDIS_URL=rediss://...
+DEBUG=false
 ```
 
 #### 4. Deploy
@@ -240,23 +259,17 @@ REDIS_URL = redis://...
 - Ejecutará `pip install -r requirements.txt`
 - Deployará la función
 
-**Output esperado:**
-```
-✓ Production Function ready in 12s
-✓ Preview URL: https://proyecto-py-xxx.vercel.app
-```
-
 #### 5. Verificar Deployment
 
 ```bash
-curl https://proyecto-py-xxx.vercel.app/
+curl https://<tu-proyecto>.vercel.app/
 ```
 
 Deberías recibir:
 ```json
 {
   "message": "Welcome to EasyDocs API!",
-  "version": "2.3.0",
+  "version": "3.4.0",
   "endpoints": [...]
 }
 ```
@@ -293,7 +306,7 @@ redis-cli ping
 redis-server
 
 # 2. Verifica REDIS_URL en .env
-# Debería ser: redis://localhost:6379
+# Debería ser: redis://localhost:6379/0
 
 # 3. Si usas Redis en la nube, verifica la URL
 # Ej: redis://xxxxx:xxxxx@xxxxx.upstash.io:xxxxx
@@ -302,22 +315,12 @@ redis-server
 python -m api.main
 ```
 
-### Error: `Invalid GROQ_API_KEY`
+### Error: `[CONFIG ERROR] Debes configurar al menos GROQ_API_KEY, OPENROUTER_API_KEY o GEMINI_API_KEY`
 
 **Solución:**
-```bash
-# 1. Verifica que la clave es válida
-# Ve a https://console.groq.com/keys
-
-# 2. Copia la clave completa (sin espacios)
-# Ejemplo: sk_1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p
-
-# 3. Actualiza .env
-GROQ_API_KEY=sk_1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p
-
-# 4. Reinicia la aplicación
-python -m api.main
-```
+1. Verifica que `.env` existe en la raíz del proyecto y tiene al menos una clave válida (`GROQ_API_KEY`, `OPENROUTER_API_KEY` o `GEMINI_API_KEY`) sin comillas ni espacios sobrantes.
+2. Si un proveedor falla con `401`/`403`, regenera la clave en la consola del proveedor correspondiente.
+3. Reinicia la aplicación (`python -m api.main`).
 
 ### Error: `Port 5000 already in use`
 
@@ -374,9 +377,10 @@ echo "3. Redis connection..."
 redis-cli ping
 
 echo "4. Variables de entorno..."
-grep -E "^GROQ_API_KEY|^REDIS_URL" .env
+grep -E "^(GROQ|OPENROUTER|GEMINI)_API_KEY|^REDIS_URL" .env
 
 echo "5. Estructura de carpetas..."
+ls -la api/services/orchestrator/
 ls -la api/services/ai/
 ls -la api/export/
 ls -la api/routes/
@@ -389,6 +393,6 @@ echo "✓ Todo listo! Puedes ejecutar: python -m api.main"
 ## Siguiente: Documentación API
 
 Una vez instalado, consulta:
-- [README.md](../README.md) - Uso general
-- [ARCHITECTURE.md](ARCHITECTURE.md) - Arquitectura detallada
-- [API Endpoints](#) - Documentación interactiva en `/`
+- [README.md](../README.md) — Inicio rápido y tabla de endpoints
+- [ARCHITECTURE.md](ARCHITECTURE.md) — Arquitectura detallada (`v3.4.0`)
+- `GET /` — Metadatos en vivo de la API en ejecución

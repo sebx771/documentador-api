@@ -1,26 +1,30 @@
 # 🏗️ Arquitectura de EasyDocs
 
+Español | [English](ARCHITECTURE.en.md)
+
 ## Visión General
 
-EasyDocs utiliza una **arquitectura de servicios desacoplada** optimizada para procesamiento paralelo de documentación en entornos serverless. Cada componente es responsable de una función específica y se comunica a través de interfaces bien definidas.
+EasyDocs utiliza una **arquitectura de servicios desacoplada** organizada por rutas, controladores, paquete modular de orquestación (`api/services/orchestrator/`), adaptadores de proveedores IA y exportadores.
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                        Flask Application                        │
-│                     (main.py - REST API)                        │
+│              (api/main.py - REST API + CORS + 15MB cap)         │
 └─────────────────┬───────────────────────────────┬───────────────┘
                   │                               │
-          ┌───────▼─────────┐         ┌──────────▼──────────┐
-          │  Download Routes │         │   ZIP Routes        │
-          │  (JSON input)    │         │  (File upload)      │
-          └────────┬────────┘         └──────────┬──────────┘
-                   │                             │
-                   └──────────────┬──────────────┘
-                                  │
-                    ┌─────────────▼──────────────┐
-                    │ Documentation Orchestrator │
-                    │  (Coordinador Principal)   │
-                    └─────────────┬──────────────┘
+          ┌───────▼─────────┐             ┌───────▼───────────┐
+          │ Download Routes │             │    ZIP Routes     │
+          │ (+ Rate Limit)  │             │  (+ Rate Limit)   │
+          └───────┬─────────┘             └───────┬───────────┘
+                  │                               │
+          ┌───────▼──────────┐            ┌───────▼───────────┐
+          │DownloadController│            │   ZipController   │
+          └───────┬──────────┘            └───────┬───────────┘
+                  │                               │
+                  │               ┌───────────────▼───────────────┐
+                  │               │   DocumentationOrchestrator   │
+                  │               │ (api/services/orchestrator/)  │
+                  │               └───────────────┬───────────────┘
                                   │
         ┌─────────────────────────┼─────────────────────────┐
         │                         │                         │
@@ -41,7 +45,7 @@ EasyDocs utiliza una **arquitectura de servicios desacoplada** optimizada para p
         │                                                     │
         │              ┌──────────────────────┐              │
         │              │ DocumentadorIA       │              │
-        │              │ (Groq/Llama 3.1)     │              │
+        │              │(Groq/OpenRouter/Gem.)│              │
         │              └──────────────────────┘              │
         │                                                     │
         │              ┌──────────────────────┐              │
@@ -51,18 +55,19 @@ EasyDocs utiliza una **arquitectura de servicios desacoplada** optimizada para p
                                                               │
             ┌───────────────────┬───────────────────┬──────────┐
             │                   │                   │          │
-        ┌───▼───┐          ┌───▼───────┐      ┌───▼────┐    ┌──▼───────┐
-        │ FPDF  │          │ python-   │      │Markdown │    │ ZipService│
-        │Export │          │  docx     │      │Exporter │    │ .crear_zip│
-        │(PDF)  │          │(Word)     │      │         │    │(Multifile)│
-        └───────┘          └───────────┘      └─────────┘    └──────────┘
+        ┌───▼───────┐      ┌───▼───────┐      ┌───▼────┐    ┌──▼───────┐
+        │markdown-  │      │ python-   │      │Markdown │    │ ZipService│
+        │pdf (PDF)  │      │  docx     │      │Exporter │    │ .crear_zip│
+        │           │      │(Word)     │      │         │    │(Multifile)│
+        └───────────┘      └───────────┘      └─────────┘    └──────────┘
             │                   │                   │             │
             └───────────────────┼───────────────────┼─────────────┘
                                 │                   │
                           ┌─────▼───────────────────▼─────┐
                           │         Response              │
-                          │   (archivo o .zip bytes,      │
-                          │    JSON solo en errores)      │
+                          │ (Archivo/.zip o JSON en GET /,│
+                          │  GET /api/download, preview y │
+                          │            errores)           │
                           └───────────────────────────────┘
 ```
 
@@ -70,59 +75,57 @@ EasyDocs utiliza una **arquitectura de servicios desacoplada** optimizada para p
 
 ## 📦 Componentes Principales
 
-### 1. **Flask Application** (`api/main.py`)
-- Servidor REST que gestiona todas las peticiones
-- Configuración CORS para acceso desde frontend
-- Rutas organizadas por blueprints
-- Manejo global de errores HTTP
+### 1. **Flask Application** (`api/main.py` + `api/logging_config.py`)
+- Servidor REST (`API_VERSION = "3.4.0"`) que gestiona `GET /` y registra los blueprints bajo `/api`
+- Configuración CORS para orígenes permitidos (`ALLOWED_ORIGINS`)
+- Límite global de petición HTTP (`MAX_CONTENT_LENGTH = 15 MB` -> HTTP `413`)
+- Logging centralizado (`api/logging_config.py`) y manejo global de errores HTTP (`404`, `413`, `405`, `500`)
 
-### 2. **Routes** (`api/routes/`)
+### 2. **Routes y Controllers** (`api/routes/` + `api/controllers/`)
 
-#### `download.py`
-- Endpoint: `POST /api/download/<type>`
-- Acepta JSON con código fuente
-- Genera documentación directamente sin ZIP
-- Soporta: markdown, pdf, word
+#### `download.py` -> `DownloadController`
+- `GET /api/download`: devuelve esquema de uso, formatos y límites en JSON
+- `POST /api/download/<file_type>`: acepta JSON (o archivo) con código fuente y `language`/`extra`
+- Soporta `file_type`: `markdown`, `pdf`, `docx`
+- Protegido por `ai_endpoint_limiter` (`10 req/min` por IP)
 
-#### `zip.py`
-- Endpoint: `POST /api/upload-zip`
-- Procesa archivos ZIP completos
-- Orquesta el flujo completo de generación
-- Soporta `doc_type`: markdown, pdf, word, **multifile**
-- Devuelve documento consolidado (.md/.pdf/.docx) o .zip con N .md (multifile)
+#### `zip.py` -> `ZipController`
+- `POST /api/preview-zip`: valida e inspecciona archivos elegibles/ignorados sin llamar a IA (`light_endpoint_limiter`: `30 req/min` por IP)
+- `POST /api/upload-zip`: procesa un `.zip` completo y delega en `DocumentationOrchestrator` (`ai_endpoint_limiter`: `10 req/min` por IP)
+- Soporta `doc_type`: `markdown`, `pdf`, `word`, **`multifile`**
+- Devuelve documento consolidado (`.md`/`.pdf`/`.docx`) o `.zip` con N archivos `.md` (`multifile`)
 
-### 3. **DocumentationOrchestrator** (`api/services/documentation_orchestrator.py`)
+### 3. **DocumentationOrchestrator** (`api/services/orchestrator/` + fachada `api/services/documentation_orchestrator.py`)
 
-Es el **corazón de la aplicación**. Coordina el flujo:
+El orquestador está modularizado en `api/services/orchestrator/` con modelos de dominio tipados (`SourceFile`, `ChunkDocumentation`, `GenerationMetadata`, `SingleDocResult`, `MultifileResult`):
+- `models.py` — Estructuras tipadas del pipeline
+- `extraction.py` — Extracción segura y selección de archivos elegibles (`ZipService`)
+- `generation.py` — Generación por chunks con caché SHA-256 (`CacheService` + `DocumentadorIA`)
+- `consolidation.py` — Síntesis jerárquica multirronda por presupuesto de tokens (`final_doc`) y aplicación tardía de `extra_requirements`
+- `results.py` — Construcción de respuestas y nombres de archivo multifile por ruta relativa sanitizada
+- `pipeline.py` — Coordinador `DocumentationOrchestrator.process_zip()` (con fachada de retrocompatibilidad en `api/services/documentation_orchestrator.py`)
 
 ```
 ZIP Input
    ↓
-Extract Files (ZipService)
+Extract Files (extraction.py -> ZipService)
    ↓
 Create Chunks (ChunkingService)
    ↓
 Detect Language (DocumentadorIA)
    ↓
-Process Chunks (DocumentadorIA + Cache)
+Process Chunks (generation.py -> CacheService + DocumentadorIA)
    ↓
 ┌─ ¿multifile=True? ─────────────────────┐
 │                                       │
 SÍ                                      NO
 ↓                                       ↓
-Skip Consolidation              Consolidate Documentation
+results.py (rutas sanitizadas)  consolidation.py (multirronda final_doc)
 ↓                                       ↓
-Collect per-chunk docs          Apply Extra Requirements
-↓                                       ↓
-Return {"files": {...}}         Return {"documentation": "..."}
+Return MultifileResult          Apply Extra Requirements (apply_extra)
+                                        ↓
+                                Return SingleDocResult
 ```
-
-**Métodos Clave:**
-- `process_zip()` - Punto de entrada principal (acepta `multifile=False`)
-- `_extract_files()` - Extrae contenido del ZIP
-- `_process_chunks()` - Genera documentación por chunk
-- `_consolidate_documentation()` - Merge inteligente de resultados (solo modo no-multifile)
-- `_generate_chunk_filename()` - Asigna nombre significativo a cada .md de chunk
 
 ### 4. **ChunkingService** (`api/services/chunking_service.py`)
 
@@ -148,7 +151,7 @@ Salida: Lista de chunks
 Almacena resultados en **Redis**:
 
 ```
-Input Code → SHA256 Hash → Redis Key
+Input Code + language + PROMPT_VERSION → SHA256 Hash → Redis Key
                 ↓
          ¿Resultado en cache?
          ↙              ↖
@@ -212,7 +215,7 @@ Motor de generación con **múltiples proveedores de IA** a través de `BaseAIPr
        └─→ Cada modelo: 3 reintentos con backoff
    
 6. Call Provider
-   └─→ GroqProvider.create_chat_completion()
+   └─→ GroqProvider / OpenRouterProvider / GeminiProvider (.create_chat_completion())
    
 7. Clean Response
    ├─→ Elimina etiquetas <think>
@@ -222,8 +225,8 @@ Motor de generación con **múltiples proveedores de IA** a través de `BaseAIPr
 ```
 
 **Soporta:**
-- Proveedores: Groq (actual), OpenRouter (futuro)
-- Modelos: ruteo por rol (chunking, final_doc, fallback, emergency)
+- Proveedores (`api/services/ai/provider/`): **Groq**, **OpenRouter** y **Google Gemini** (inicialización condicional según claves presentes en `api/config.py`)
+- Modelos (`api/services/ai/models.py`): ruteo por rol (`chunking`, `final_doc`, `fallback`, `emergency`)
 - Idiomas: Español, Inglés
 - Formatos de salida: Markdown, PDF, Word, Multifile .zip
 
@@ -233,8 +236,8 @@ Convierten Markdown a formatos finales:
 
 | Exporter | Tecnología | Ventajas |
 |----------|-----------|----------|
-| FPDF | `fpdf` | Ligero, portátil, rápido |
-| DOCX | `python-docx` | Editable, profesional |
+| PDF | `markdown-pdf` (`api/export/pdf_gen.py`) | Renderizado directo desde Markdown |
+| DOCX | `python-docx` (`api/export/docx_gen.py`) | Editable, formato estructurado |
 | Markdown | Nativo | Versionable, legible |
 | Multifile ZIP | `zipfile` | N documentos .md empaquetados |
 
@@ -329,20 +332,21 @@ POST /api/upload-zip
 
 ```
 ZIP Input
-├─ ¿No es ZIP? → 400 Bad Request
-├─ ¿Muy grande (>10MB)? → 413 Payload Too Large
+├─ Rate limit por IP excedido → 429 Too Many Requests (Retry-After, X-RateLimit-*)
+├─ Petición > 15 MB → 413 Payload Too Large
+├─ ¿No es ZIP / ZIP Bomb / Path Traversal / > 300 archivos / > 40 MB descomprimidos? → 400 Bad Request
 ├─ ¿Sin archivos válidos? → 400 No Valid Files
 └─ ✓ Válido → Procesar
-     ├─ Error IA → 500 con fallback
-     ├─ Error Redis → 500 sin cache
-     └─ Error ZipService → 400 Invalid Format
+     ├─ Saturación de proveedor IA → 429 Too Many Requests
+     ├─ Error IA sin fallback disponible → 500 Internal Server Error
+     └─ Error Redis → Opera sin caché / rate limiter fail-open
 ```
 
 ### Fallbacks
 
-1. **Si falla IA primaria** → Intenta modelo secundario
-2. **Si falla Redis** → Opera sin cache (más lento)
-3. **Si falla Groq** → Retorna error con instrucciones
+1. **Si falla IA primaria** → Intenta `fallback` y `emergency` (hasta 3 reintentos con backoff por modelo)
+2. **Si falla Redis** → Opera sin caché (más lento) y en modo *fail-open* para rate limit
+3. **Si todos los proveedores fallan por cuota** → Retorna HTTP `429` o `500` en JSON con `codigo_error`
 
 ---
 
@@ -352,10 +356,10 @@ ZIP Input
 |----------|-------|------------------------|
 | Redis para cache | Distribuido + serverless-ready | En-memory dict (no persiste) |
 | Redis para rate limit | Compartido entre instancias | Token bucket en memoria |
-| Groq + Llama | Velocidad + costo | OpenAI (más lento/caro) |
-| Chunking automático | Proyectos grandes | Procesar todo de una (límite tokens) |
-| Multiidioma | Clientes globales | Solo español (limitado) |
-| Vercel Serverless | Escalabilidad + costo | VPS tradicional |
+| Multi-proveedor (Groq + OpenRouter + Gemini) | Ruteo por rol (`chunking`, `final_doc`, `fallback`, `emergency`) y tolerancia a cuotas | Proveedor único |
+| Chunking automático + consolidación multirronda | Proyectos grandes sin exceder ventanas de contexto | Procesar todo en una sola llamada |
+| Multiidioma | Clientes globales (ES/EN) | Solo español |
+| Docker PaaS + soporte Vercel | Docker PaaS soporta hasta 15 MB y consolidaciones largas; Vercel queda para cargas livianas | Solo serverless (límite ~4.5 MB y timeouts) |
 
 ---
 
@@ -363,12 +367,13 @@ ZIP Input
 
 ### Limitaciones Actuales
 
-| Factor | Límite | Solución |
-|--------|--------|----------|
-| Tamaño ZIP | 10 MB | Aumentar si Groq lo permite |
-| Archivos por ZIP | 50 | Configurar según memoria |
-| Chunk size | 50 KB | Ajustar según tokens |
-| TPM Groq | 6000 | Upgrade plan Groq |
+| Factor | Límite | Notas |
+|--------|--------|-------|
+| Petición HTTP (`MAX_CONTENT_LENGTH`) | 15 MB | Configurado en `api/main.py` (HTTP 413 si se excede); Vercel impone ~4.5 MB en su edge |
+| Tamaño ZIP descomprimido | 40 MB | Validación anti ZIP Bomb en `ZipService.validar_zip_seguro` |
+| Archivos totales en ZIP | 300 | Límite de seguridad en `ZipService.MAX_FILES_COUNT` |
+| Archivos elegibles por defecto | 50 | `ZipService.DEFAULT_MAX_ELIGIBLE_FILES` |
+| Rate limiting por IP | 10 req/min (IA), 30 req/min (preview) | `EndpointRateLimiter` con cabeceras `Retry-After` y `X-RateLimit-*` |
 
 ### Mejoras Futuras
 
@@ -384,20 +389,20 @@ ZIP Input
 ## 🔐 Seguridad
 
 ### Gestión de Secretos
-- Variables de entorno (`GROQ_API_KEY`, `REDIS_URL`)
-- NO incluidas en git
-- Configuradas en Vercel dashboard
+- Variables de entorno (`GROQ_API_KEY`, `OPENROUTER_API_KEY`, `GEMINI_API_KEY`, `REDIS_URL`) definidas en `.env` (referencia en `.env.example`)
+- Excluidas de git mediante `.gitignore`
+- Configuradas en el panel del hosting (Docker PaaS / Vercel)
 
 ### Validaciones de Input
-- Validación de tipo MIME (solo ZIP)
-- Validación de tamaño máximo
-- Sanitización de nombres de archivo
-- Detección de malware (futuro)
+- Validación de archivo `.zip` válido y tamaño máximo HTTP (`15 MB`)
+- Protección contra *ZIP Bombs* (`40 MB` descomprimidos, máximo `300` archivos)
+- Protección contra *Path Traversal* (bloqueo de rutas absolutas o con `..`)
+- Sanitización de rutas relativas en exportación `multifile`
 
 ### Rate Limiting
-- TPM limitado por modelo
-- RPM limitado por IP (futuro)
-- Previene abuso API
+- TPM limitado por modelo hacia los proveedores
+- Rate limiting por IP (`10 req/min` en `/api/download/<file_type>` y `/api/upload-zip`; `30 req/min` en `/api/preview-zip`)
+- Prevención de abuso en despliegues públicos
 
 ---
 
