@@ -5,6 +5,28 @@ Todos los cambios notables en EasyDocs se documenta en este archivo.
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 y este proyecto sigue [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.4.0] - 2026/11/08
+
+### 🔄 Refactor / Architecture
+- **Modularización del Orquestador de Documentación (`api/services/orchestrator/`)**:
+  - Descomposición del monolito en módulos con responsabilidades aisladas: `models.py`, `extraction.py`, `generation.py`, `consolidation.py`, `results.py` y `pipeline.py`.
+  - Reemplazo de `DocumentationOrchestrator` monolítico por una fachada ligera de retrocompatibilidad en `api/services/documentation_orchestrator.py`.
+  - Adopción de modelos de dominio tipados (`SourceFile`, `ChunkDocumentation`, `GenerationMetadata`, `SingleDocResult`, `MultifileResult`).
+  - Eliminación del protocolo basado en cadenas delimitadas por `### Archivo:` en `ZipService.extraer_zip`, pasando a estructuras de datos tipadas e inmunes a colisiones de marcadores dentro del código fuente.
+
+### ✨ Added
+- **Consolidación Multirronda Inteligente en IA**:
+  - Incorporación del rol de modelo `final_doc` con presupuesto ampliado de tokens de salida (hasta 8192 tokens).
+  - Algoritmo de agrupamiento (batching) jerárquico por presupuesto de tokens de entrada (`estimate_input_tokens`) para síntesis progresiva sin exceder cuotas de proveedores.
+  - Prompts estructurados canónicos para consolidación bilingüe (español e inglés) con validación estricta de encabezados requeridos.
+  - Aplicación tardía de requisitos adicionales (`apply_extra`) sobre el documento consolidado final.
+
+### 🐛 Fixed
+- **Inclusión de idioma y versión en la clave de caché**: `CacheService.generate_hash` ahora incluye el idioma (`language`) y una constante `PROMPT_VERSION = "v1"` para evitar contaminación cruzada entre solicitudes ES/EN y permitir invalidación controlada.
+- **Cálculo de tiempo de procesamiento real**: `elapsed_time_seconds` ahora se calcula tras la etapa de consolidación final (la más costosa), reflejando la duración real de extremo a extremo.
+- **Prevención de colisiones de nombres en multifile**: El generador de nombres de archivo utiliza la ruta relativa sanitizada en vez de solo el nombre base, evitando sobrescrituras cuando existen archivos homónimos en distintas carpetas (ej. `api/index.py` y `web/index.py`).
+- **Sincronización de límite de archivos**: Se unificó `max_files` del orquestador con `DEFAULT_MAX_ELIGIBLE_FILES` en `ZipService`.
+
 ## [3.3.2] - 2026/10/18
 
 ### 🔒 Security / Configuration
