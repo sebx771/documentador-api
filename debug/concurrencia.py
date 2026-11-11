@@ -3,7 +3,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 
 def send():
-    with open("ejercicios_javascript.zip", "rb") as f:
+    with open("test/fixtures/ejercicios_javascript.zip", "rb") as f:
         r = requests.post(
             "http://127.0.0.1:5000/api/preview-zip",
             files={"file": ("PaginaWebHTML-main.zip", f, "application/zip")}

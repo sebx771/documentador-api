@@ -4,10 +4,10 @@ sys.path.insert(0, '.')
 from api.services.zip_services import ZipService
 from api.services.documentation_orchestrator import DocumentationOrchestrator
 from api.services.chunking_service import ChunkingService
-from api.services.cache_service import CacheService, get_global_cache
-import time
+from api.services.cache_service import get_global_cache
 
-ZIP_FILE = 'ejercicios_javascript.zip'
+
+ZIP_FILE = 'test/fixtures/ejercicios_javascript.zip'
 
 def test_cache():
     print("=" * 50)
@@ -18,7 +18,7 @@ def test_cache():
         zip_content = f.read()
     
     cache = get_global_cache(max_size=100, ttl_seconds=3600)
-    chunking = ChunkingService(max_chunk_size=8000, max_files_per_chunk=10)
+    chunking = ChunkingService(max_chunk_tokens=8000, max_files_per_chunk=10)
     zip_service = ZipService()
     
     print(f"\n[1] Primer request al servidor (cache vacío)")

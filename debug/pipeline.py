@@ -6,7 +6,7 @@ from api.services.documentation_orchestrator import DocumentationOrchestrator
 from api.services.chunking_service import ChunkingService
 from api.services.cache_service import CacheService
 
-ZIP_FILE = 'ejercicios_javascript.zip'
+ZIP_FILE = 'test/fixtures/ejercicios_javascript.zip'
 
 def test_zip_processing():
     print("=" * 50)

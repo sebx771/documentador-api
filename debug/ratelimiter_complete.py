@@ -300,7 +300,7 @@ h1 {
             orch = DocumentationOrchestrator(
                 max_input_size=10*1024*1024,
                 max_files=50,
-                chunking_service=ChunkingService(max_chunk_size=5000),
+                chunking_service=ChunkingService(max_chunk_tokens=5000),
                 cache_service=CacheService(max_size=100)
             )
             

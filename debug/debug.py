@@ -24,7 +24,7 @@ def enviar_archivo(ruta_archivo, tipo="markdown", extra=None):
 
 if __name__ == "__main__":
    for i in range(1):
-    file= enviar_archivo("PaginaWebHTML-main.zip", "markdown", "habla de las dependencias , tambien haz un esquema de flujo y su posible función en el proyecto")
+    file= enviar_archivo("test/fixtures/PaginaWebHTML-main.zip", "markdown", "habla de las dependencias , tambien haz un esquema de flujo y su posible función en el proyecto")
   
    with open(f"documentacion{datetime.now().strftime('%Y%m%d%H%M%S')}.pdf", "wb") as f:
         f.write(file)
