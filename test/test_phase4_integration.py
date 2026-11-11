@@ -15,7 +15,7 @@ class TestPhase4Integration(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         data = response.get_json()
         self.assertEqual(data.get("version"), API_VERSION)
-        self.assertEqual(data.get("version"), "3.3.0")
+        self.assertEqual(data.get("version"), "3.4.0")
 
     def test_custom_error_handlers(self):
         """Verifica el formato JSON estándar en errores 404 y 405."""

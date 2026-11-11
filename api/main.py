@@ -9,7 +9,7 @@ from .logging_config import setup_logging
 setup_logging()
 logger = logging.getLogger(__name__)
 
-API_VERSION = "3.3.0"
+API_VERSION = "3.4.0"
 app = Flask(__name__)
 ALLOWED_ORIGINS = [
     "https://documentador-front.vercel.app",
@@ -63,18 +63,18 @@ def welcome():
                 "description": "Process a ZIP file and generate consolidated documentation",
                 "parameters": {
                     "file": "ZIP file with source code (form-data)",
-                    "doc_type": "Document type: 'markdown', 'pdf' or 'word' (optional)",
+                    "doc_type": "Document type: 'markdown', 'pdf', 'word' or 'multifile' (optional)",
                     "extra_requirements": "Additional requirements for documentation (optional)",
                     "language": "Target language: 'es' or 'en' (optional, string or Accept-Language header)"
                 }
             }
         ],
-        "supported_formats": ["markdown", "pdf", "word"],
+        "supported_formats": ["markdown", "pdf", "word", "multifile"],
         "features": [
-            "Intelligent cache by content hash",
-            "Multilanguage support (Python/Java/JS)",
+            "Content-hash caching with Redis",
+            "Multilanguage support (Python, Java, JS/TS, Go, Kotlin, PHP, web/config)",
             "Automatic chunking for large projects",
-            "Documentation generation in multiple formats"
+            "Documentation generation in Markdown, PDF, Word, and multifile ZIP"
         ]
     })
 
